@@ -1,22 +1,41 @@
 package io.github.aomsweet.caraway;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
 /**
  * @author aomsweet
  */
-public class DirectProxyConnector extends ProxyConnector {
+public class DirectProxyConnector implements ProxyConnector {
+
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(DirectProxyConnector.class);
+
+    Bootstrap bootstrap;
+
+    public DirectProxyConnector() {
+        this.bootstrap = new Bootstrap()
+            .channel(NioSocketChannel.class)
+            .option(ChannelOption.TCP_NODELAY, true)
+            .handler(new ChannelInitializer<>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    if (logger.isDebugEnabled()) {
+                        ch.pipeline().addLast(new LoggingHandler());
+                    }
+                }
+            });
+    }
 
     public DirectProxyConnector(Bootstrap bootstrap) {
-        super(bootstrap);
+        this.bootstrap = bootstrap;
     }
 
     @Override
