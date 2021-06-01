@@ -52,9 +52,11 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         boolean isWritable = ctx.channel().isWritable();
-        logger.info("{} WRITABILITY CHANGED. CURRENT STATUS: {}. {} {}", ctx.channel(),
-            isWritable ? "WRITABLE" : "NOT WRITABLE", replayChannel,
-            isWritable ? "ENABLE AUTO READ" : "DISABLE AUTO READ");
+        if (logger.isDebugEnabled()) {
+            logger.debug("{} WRITABILITY CHANGED. CURRENT STATUS: {}. {} {}", ctx.channel(),
+                isWritable ? "WRITABLE" : "NOT WRITABLE", replayChannel,
+                isWritable ? "ENABLE AUTO READ" : "DISABLE AUTO READ");
+        }
         replayChannel.config().setAutoRead(isWritable);
     }
 
