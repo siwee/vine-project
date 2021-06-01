@@ -12,13 +12,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class ReplayHandler extends ChannelInboundHandlerAdapter {
+public class RelayHandler extends ChannelInboundHandlerAdapter {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(ReplayHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(RelayHandler.class);
 
     Channel replayChannel;
 
-    public ReplayHandler(Channel replayChannel) {
+    public RelayHandler(Channel replayChannel) {
         this.replayChannel = replayChannel;
     }
 
