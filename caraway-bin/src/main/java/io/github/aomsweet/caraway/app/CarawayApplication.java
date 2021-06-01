@@ -1,7 +1,7 @@
 package io.github.aomsweet.caraway.app;
 
 import ch.qos.logback.classic.LoggerContext;
-import io.github.aomsweet.caraway.CarawayBootstrap;
+import io.github.aomsweet.caraway.CarawayServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,7 @@ public class CarawayApplication {
         String name = mx.getName();
         logger.info("Starting {} on {} with process id {} ({})", CarawayApplication.class.getSimpleName(),
             name.substring(name.indexOf('@') + 1), mx.getPid(), System.getProperty("user.dir"));
-        CarawayBootstrap bootstrap = new CarawayBootstrap()
+        CarawayServer bootstrap = new CarawayServer()
             .withPort(2228);
         bootstrap.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

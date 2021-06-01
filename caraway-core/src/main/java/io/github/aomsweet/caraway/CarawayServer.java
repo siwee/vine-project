@@ -20,9 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author aomsweet
  */
-public class CarawayBootstrap implements Closeable {
+public class CarawayServer implements Closeable {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayBootstrap.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
     SocketAddress actualBoundAddress;
     SocketAddress preBoundAddress;
@@ -34,7 +34,7 @@ public class CarawayBootstrap implements Closeable {
     EventLoopGroup workerEventLoopGroup;
     long startTimestamp;
 
-    public CarawayBootstrap() {
+    public CarawayServer() {
         this.bossEventLoopGroupSize = 1;
         this.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
     }
@@ -160,37 +160,37 @@ public class CarawayBootstrap implements Closeable {
         return completableFuture;
     }
 
-    public CarawayBootstrap withPort(int port) {
+    public CarawayServer withPort(int port) {
         this.preBoundAddress = new InetSocketAddress(port);
         return this;
     }
 
-    public CarawayBootstrap withAddress(String host, int port) {
+    public CarawayServer withAddress(String host, int port) {
         this.preBoundAddress = new InetSocketAddress(host, port);
         return this;
     }
 
-    public CarawayBootstrap withAddress(SocketAddress address) {
+    public CarawayServer withAddress(SocketAddress address) {
         this.preBoundAddress = address;
         return this;
     }
 
-    public CarawayBootstrap withBossEventLoopGroupSize(int bossEventLoopGroupSize) {
+    public CarawayServer withBossEventLoopGroupSize(int bossEventLoopGroupSize) {
         this.bossEventLoopGroupSize = bossEventLoopGroupSize;
         return this;
     }
 
-    public CarawayBootstrap withAcceptorEventLoopGroup(EventLoopGroup acceptorEventLoopGroup) {
+    public CarawayServer withAcceptorEventLoopGroup(EventLoopGroup acceptorEventLoopGroup) {
         this.acceptorEventLoopGroup = acceptorEventLoopGroup;
         return this;
     }
 
-    public CarawayBootstrap withWorkerEventLoopGroupSize(int workerEventLoopGroupSize) {
+    public CarawayServer withWorkerEventLoopGroupSize(int workerEventLoopGroupSize) {
         this.workerEventLoopGroupSize = workerEventLoopGroupSize;
         return this;
     }
 
-    public CarawayBootstrap withWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
+    public CarawayServer withWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
         this.workerEventLoopGroup = workerEventLoopGroup;
         return this;
     }
