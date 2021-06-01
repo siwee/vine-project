@@ -12,7 +12,7 @@ import io.netty.handler.logging.LoggingHandler;
 /**
  * @author aomsweet
  */
-public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
+public class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
