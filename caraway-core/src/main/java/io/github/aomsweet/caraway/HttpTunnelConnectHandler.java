@@ -47,8 +47,8 @@ public class HttpTunnelConnectHandler extends ConnectHandler {
                     ctx.writeAndFlush(ctx.alloc().buffer(ESTABLISHED_BYTES.length)
                         .writeBytes(ESTABLISHED_BYTES)).addListener(future -> {
                         if (future.isSuccess()) {
-                            inboundPipeline.addLast(new ReplayHandler(outboundChannel));
-                            outboundPipeline.addLast(new ReplayHandler(inboundChannel));
+                            inboundPipeline.addLast(new RelayHandler(outboundChannel));
+                            outboundPipeline.addLast(new RelayHandler(inboundChannel));
                         } else {
                             ctx.close();
                             outboundPipeline.close();

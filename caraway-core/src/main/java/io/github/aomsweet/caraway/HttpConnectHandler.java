@@ -64,8 +64,8 @@ public class HttpConnectHandler extends ConnectHandler {
                         this.remoteAddress, remoteAddress);
                 }
                 this.remoteAddress = remoteAddress;
-                inboundChannel.pipeline().remove(ReplayHandler.class);
-                outboundChannel.pipeline().remove(ReplayHandler.class);
+                inboundChannel.pipeline().remove(RelayHandler.class);
+                outboundChannel.pipeline().remove(RelayHandler.class);
                 outboundChannel.writeAndFlush(ctx.alloc().buffer(0))
                     .addListener(ChannelFutureListener.CLOSE);
                 doConnect(ctx, httpRequest);
@@ -100,8 +100,8 @@ public class HttpConnectHandler extends ConnectHandler {
                 outboundChannel.writeAndFlush(httpRequest).addListener(future -> {
                     if (future.isSuccess()) {
                         connected = true;
-                        outboundPipeline.addLast(new ReplayHandler(inboundChannel));
-                        inboundPipeline.addLast(new ReplayHandler(outboundChannel));
+                        outboundPipeline.addLast(new RelayHandler(inboundChannel));
+                        inboundPipeline.addLast(new RelayHandler(outboundChannel));
                         clearQueue(ctx);
                         inboundChannel.config().setAutoRead(true);
                     } else {
