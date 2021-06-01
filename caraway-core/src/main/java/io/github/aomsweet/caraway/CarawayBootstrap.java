@@ -236,7 +236,6 @@ public class CarawayBootstrap implements Closeable {
         try {
             stop();
         } catch (Exception e) {
-            logger.error("Failed to close caraway.", e);
             throw new RuntimeException(e);
         }
     }
