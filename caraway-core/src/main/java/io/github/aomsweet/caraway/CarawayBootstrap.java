@@ -7,15 +7,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -40,7 +39,7 @@ public class CarawayBootstrap implements Closeable {
         this.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
     }
 
-    public Future<Void> start() {
+    public CompletionStage<Channel> start() {
         startTimestamp = System.currentTimeMillis();
         if (acceptorEventLoopGroup == null) {
             holdBossEventLoopGroup = true;
@@ -55,7 +54,7 @@ public class CarawayBootstrap implements Closeable {
         return doBind();
     }
 
-    private Future<Void> doBind() {
+    private CompletionStage<Channel> doBind() {
         ServerBootstrap bootstrap = new ServerBootstrap()
             .group(acceptorEventLoopGroup, workerEventLoopGroup)
             .channel(NioServerSocketChannel.class);
@@ -73,9 +72,12 @@ public class CarawayBootstrap implements Closeable {
                 pipeline.addLast(new ProxyServerHandler());
             }
         });
-        return bootstrap.bind(preBoundAddress).addListener((ChannelFutureListener) future -> {
+        CompletableFuture<Channel> channelFuture = new CompletableFuture<>();
+        bootstrap.bind(preBoundAddress).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
-                actualBoundAddress = future.channel().localAddress();
+                Channel channel = future.channel();
+                channelFuture.complete(channel);
+                actualBoundAddress = channel.localAddress();
                 String address = actualBoundAddress.toString();
                 if (address.charAt(0) == '/') {
                     address = address.substring(1);
@@ -85,8 +87,10 @@ public class CarawayBootstrap implements Closeable {
             } else {
                 startTimestamp = 0;
                 logger.error("Caraway start failed.", future.cause());
+                channelFuture.completeExceptionally(future.cause());
             }
         });
+        return channelFuture;
     }
 
     public ThreadFactory threadFactory(String prefix) {
@@ -96,6 +100,64 @@ public class CarawayBootstrap implements Closeable {
             thread.setName(prefix + threadSequence.getAndAdd(1));
             return thread;
         };
+    }
+
+    public CompletableFuture<Void> stop() throws InterruptedException, ExecutionException {
+        return stop(false);
+    }
+
+    public CompletableFuture<Void> stop(boolean immediately) throws InterruptedException, ExecutionException {
+        CompletableFuture<Void> future = doStop(immediately);
+        future.get();
+        return future;
+    }
+
+    public CompletableFuture<Void> asyncStop() {
+        return asyncStop(false);
+    }
+
+    public CompletableFuture<Void> asyncStop(boolean immediately) {
+        return doStop(immediately);
+    }
+
+    private CompletableFuture<Void> doStop(boolean immediately) {
+        long stopTimestamp = System.currentTimeMillis();
+        CompletableFuture<Void> future;
+        if (holdBossEventLoopGroup && !(acceptorEventLoopGroup.isShutdown() || acceptorEventLoopGroup.isShuttingDown())) {
+            future = shutdownEventLoopGroup(acceptorEventLoopGroup, immediately, "Shutdown acceptor EventLoopGroup.");
+        } else {
+            future = new CompletableFuture<>();
+            future.complete(null);
+        }
+        if (holdWorkerEventLoopGroup && !(workerEventLoopGroup.isShutdown() || workerEventLoopGroup.isShuttingDown())) {
+            future = future.thenCompose(unused -> shutdownEventLoopGroup(workerEventLoopGroup, immediately, "Shutdown worker EventLoopGroup."));
+        }
+        future.whenComplete((v, e) -> {
+            if (e == null) {
+                logger.info("Caraway stopped in {}s.", (System.currentTimeMillis() - stopTimestamp) / 1000.0);
+            } else {
+                logger.error("Failed to close caraway.", e);
+            }
+        });
+        return future;
+    }
+
+    private CompletableFuture<Void> shutdownEventLoopGroup(EventLoopGroup eventLoopGroup, boolean immediately, String comment) {
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        GenericFutureListener<Future<Object>> futureListener = future -> {
+            if (future.isSuccess()) {
+                logger.info(comment);
+                completableFuture.complete(null);
+            } else {
+                completableFuture.completeExceptionally(future.cause());
+            }
+        };
+        if (immediately) {
+            eventLoopGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).addListener(futureListener);
+        } else {
+            eventLoopGroup.shutdownGracefully().addListener(futureListener);
+        }
+        return completableFuture;
     }
 
     public CarawayBootstrap withPort(int port) {
@@ -171,64 +233,11 @@ public class CarawayBootstrap implements Closeable {
 
     @Override
     public void close() {
-        close(false);
-    }
-
-    public void close(boolean immediately) {
         try {
-            asyncClose(immediately).sync();
-        } catch (InterruptedException e) {
+            stop();
+        } catch (Exception e) {
             logger.error("Failed to close caraway.", e);
-        }
-    }
-
-    public Future<?> asyncClose(boolean immediately) {
-        long stopTimestamp = System.currentTimeMillis();
-        Future<?> closeFuture = null;
-        if (holdBossEventLoopGroup && !(acceptorEventLoopGroup.isShutdown()
-            || acceptorEventLoopGroup.isShuttingDown())) {
-            closeFuture = shutdownEventLoopGroup(acceptorEventLoopGroup, immediately);
-        }
-        if (holdWorkerEventLoopGroup && !(workerEventLoopGroup.isShutdown()
-            || workerEventLoopGroup.isShuttingDown())) {
-            if (closeFuture == null) {
-                return shutdownEventLoopGroup(workerEventLoopGroup, immediately);
-            } else {
-                Promise<?> promise = workerEventLoopGroup.next().newPromise();
-                closeFuture.addListener(acceptorFuture -> {
-                    if (acceptorFuture.isSuccess()) {
-                        shutdownEventLoopGroup(workerEventLoopGroup, immediately).addListener(workerFuture -> {
-                            if (workerFuture.isSuccess()) {
-                                promise.setSuccess(null);
-                            } else {
-                                promise.setFailure(workerFuture.cause());
-                            }
-                        });
-                    } else {
-                        promise.setFailure(acceptorFuture.cause());
-                    }
-                });
-                closeFuture = promise;
-            }
-        }
-        if (closeFuture == null) {
-            return null;
-        } else {
-            return closeFuture.addListener(future -> {
-                if (future.isSuccess()) {
-                    logger.info("Caraway started in {}s.", (System.currentTimeMillis() - stopTimestamp) / 1000.0);
-                } else {
-                    logger.error("Failed to close caraway.", future.cause());
-                }
-            });
-        }
-    }
-
-    private Future<?> shutdownEventLoopGroup(EventLoopGroup eventLoopGroup, boolean immediately) {
-        if (immediately) {
-            return eventLoopGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS);
-        } else {
-            return eventLoopGroup.shutdownGracefully();
+            throw new RuntimeException(e);
         }
     }
 }
