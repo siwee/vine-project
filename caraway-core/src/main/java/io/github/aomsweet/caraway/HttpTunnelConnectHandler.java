@@ -27,8 +27,8 @@ public class HttpTunnelConnectHandler extends ConnectHandler {
 
     public static final byte[] ESTABLISHED_BYTES = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
-    public HttpTunnelConnectHandler(ProxyConnector connector) {
-        super(connector);
+    public HttpTunnelConnectHandler(CarawayServer caraway) {
+        super(caraway);
     }
 
     @Override

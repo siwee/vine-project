@@ -40,8 +40,8 @@ public class HttpConnectHandler extends ConnectHandler {
     Channel inboundChannel;
     Channel outboundChannel;
 
-    public HttpConnectHandler(ProxyConnector connector) {
-        super(connector);
+    public HttpConnectHandler(CarawayServer caraway) {
+        super(caraway);
         this.queue = new ArrayDeque<>(4);
     }
 

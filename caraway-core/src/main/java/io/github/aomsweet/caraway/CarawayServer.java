@@ -4,7 +4,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -24,6 +23,7 @@ public class CarawayServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
+    ProxyConnector connector;
     SocketAddress actualBoundAddress;
     SocketAddress preBoundAddress;
     int bossEventLoopGroupSize;
@@ -37,6 +37,7 @@ public class CarawayServer implements Closeable {
     public CarawayServer() {
         this.bossEventLoopGroupSize = 1;
         this.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
+        this.connector = new DirectProxyConnector();
     }
 
     public CompletionStage<Channel> start() {
@@ -61,6 +62,7 @@ public class CarawayServer implements Closeable {
         if (logger.isDebugEnabled()) {
             bootstrap.handler(new LoggingHandler());
         }
+        PortUnificationServerHandler unificationServerHandler = new PortUnificationServerHandler(this);
         bootstrap.childHandler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -68,8 +70,7 @@ public class CarawayServer implements Closeable {
                 if (logger.isDebugEnabled()) {
                     pipeline.addLast(new LoggingHandler());
                 }
-                pipeline.addLast(new HttpRequestDecoder());
-                pipeline.addLast(new ProxyServerHandler());
+                pipeline.addLast(unificationServerHandler);
             }
         });
         CompletableFuture<Channel> channelFuture = new CompletableFuture<>();
@@ -160,6 +161,11 @@ public class CarawayServer implements Closeable {
         return completableFuture;
     }
 
+    public CarawayServer withConnector(ProxyConnector connector) {
+        this.connector = connector;
+        return this;
+    }
+
     public CarawayServer withPort(int port) {
         this.preBoundAddress = new InetSocketAddress(port);
         return this;
@@ -193,6 +199,10 @@ public class CarawayServer implements Closeable {
     public CarawayServer withWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
         this.workerEventLoopGroup = workerEventLoopGroup;
         return this;
+    }
+
+    public ProxyConnector getConnector() {
+        return connector;
     }
 
     public SocketAddress getActualBoundAddress() {

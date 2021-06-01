@@ -12,10 +12,12 @@ public abstract class ConnectHandler extends ChannelInboundHandlerAdapter {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(ConnectHandler.class);
 
+    CarawayServer caraway;
     ProxyConnector connector;
 
-    public ConnectHandler(ProxyConnector connector) {
-        this.connector = connector;
+    public ConnectHandler(CarawayServer caraway) {
+        this.caraway = caraway;
+        this.connector = caraway.getConnector();
     }
 
     @Override
