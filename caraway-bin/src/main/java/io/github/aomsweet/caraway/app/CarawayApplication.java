@@ -11,15 +11,15 @@ import java.lang.management.RuntimeMXBean;
 /**
  * @author aomsweet
  */
-public class CarawayLauncher {
+public class CarawayApplication {
 
     private static final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-    private static final Logger logger = LoggerFactory.getLogger(CarawayLauncher.class);
+    private static final Logger logger = LoggerFactory.getLogger(CarawayApplication.class);
 
     public static void main(String[] args) {
         RuntimeMXBean mx = ManagementFactory.getRuntimeMXBean();
         String name = mx.getName();
-        logger.info("Starting {} on {} with process id {} ({})", CarawayLauncher.class.getSimpleName(),
+        logger.info("Starting {} on {} with process id {} ({})", CarawayApplication.class.getSimpleName(),
             name.substring(name.indexOf('@') + 1), mx.getPid(), System.getProperty("user.dir"));
         CarawayBootstrap bootstrap = new CarawayBootstrap()
             .withPort(2228);
