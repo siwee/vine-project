@@ -1,8 +1,6 @@
 package io.github.aomsweet.caraway;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -31,8 +29,7 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
             if (logger.isDebugEnabled()) {
                 logger.debug("{} INACTIVE. CLOSING REPLAY CHANNEL {}", ctx.channel(), replayChannel);
             }
-            ByteBuf emptyBuf = replayChannel.alloc().buffer(0, 0);
-            replayChannel.writeAndFlush(emptyBuf).addListener(ChannelFutureListener.CLOSE);
+            ChannelUtils.closeOnFlush(replayChannel);
         }
     }
 
@@ -42,7 +39,7 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
             replayChannel.writeAndFlush(msg);
         } else {
             ReferenceCountUtil.release(msg);
-            replayChannel.close();
+            ChannelUtils.closeOnFlush(replayChannel);
             ctx.close();
         }
     }
