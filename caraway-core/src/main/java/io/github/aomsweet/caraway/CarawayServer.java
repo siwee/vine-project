@@ -45,12 +45,12 @@ public class CarawayServer implements Closeable {
         if (acceptorEventLoopGroup == null) {
             holdBossEventLoopGroup = true;
             acceptorEventLoopGroup = new NioEventLoopGroup(bossEventLoopGroupSize,
-                threadFactory("Caraway NIO acceptor thread-"));
+                threadFactory("Caraway acceptor-"));
         }
         if (workerEventLoopGroup == null) {
             holdWorkerEventLoopGroup = true;
             workerEventLoopGroup = new NioEventLoopGroup(workerEventLoopGroupSize,
-                threadFactory("Caraway NIO worker thread-"));
+                threadFactory("Caraway worker-"));
         }
         return doBind();
     }
@@ -122,6 +122,7 @@ public class CarawayServer implements Closeable {
     }
 
     private CompletableFuture<Void> doStop(boolean immediately) {
+        logger.info("Caraway is stopping...");
         long stopTimestamp = System.currentTimeMillis();
         CompletableFuture<Void> future;
         if (holdBossEventLoopGroup && !(acceptorEventLoopGroup.isShutdown() || acceptorEventLoopGroup.isShuttingDown())) {
