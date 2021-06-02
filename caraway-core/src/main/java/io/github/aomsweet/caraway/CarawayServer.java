@@ -5,8 +5,6 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -104,61 +102,58 @@ public class CarawayServer implements Closeable {
     }
 
     public CompletableFuture<Void> stop() throws InterruptedException, ExecutionException {
-        return stop(false);
+        return stop(30);
     }
 
-    public CompletableFuture<Void> stop(boolean immediately) throws InterruptedException, ExecutionException {
-        CompletableFuture<Void> future = doStop(immediately);
+    public CompletableFuture<Void> stop(int timeout) throws InterruptedException, ExecutionException {
+        CompletableFuture<Void> future = doStop(timeout);
         future.get();
         return future;
     }
 
     public CompletableFuture<Void> asyncStop() {
-        return asyncStop(false);
+        return asyncStop(30);
     }
 
-    public CompletableFuture<Void> asyncStop(boolean immediately) {
-        return doStop(immediately);
+    public CompletableFuture<Void> asyncStop(int timeout) {
+        return doStop(timeout);
     }
 
-    private CompletableFuture<Void> doStop(boolean immediately) {
+    private CompletableFuture<Void> doStop(int timeout) {
         logger.info("Caraway is stopping...");
         long stopTimestamp = System.currentTimeMillis();
         CompletableFuture<Void> future;
         if (holdBossEventLoopGroup && !(acceptorEventLoopGroup.isShutdown() || acceptorEventLoopGroup.isShuttingDown())) {
-            future = shutdownEventLoopGroup(acceptorEventLoopGroup, immediately, "Shutdown acceptor EventLoopGroup.");
+            future = shutdownEventLoopGroup(acceptorEventLoopGroup, timeout,
+                "Acceptor EventLoopGroup stopped.");
         } else {
             future = new CompletableFuture<>();
             future.complete(null);
         }
         if (holdWorkerEventLoopGroup && !(workerEventLoopGroup.isShutdown() || workerEventLoopGroup.isShuttingDown())) {
-            future = future.thenCompose(unused -> shutdownEventLoopGroup(workerEventLoopGroup, immediately, "Shutdown worker EventLoopGroup."));
+            future = future.thenCompose(unused -> shutdownEventLoopGroup(workerEventLoopGroup, timeout,
+                "Worker EventLoopGroup stopped."));
         }
         future.whenComplete((v, e) -> {
             if (e == null) {
                 logger.info("Caraway stopped in {}s.", (System.currentTimeMillis() - stopTimestamp) / 1000.0);
             } else {
-                logger.error("Failed to close caraway.", e);
+                logger.error("Failed to stop caraway.", e);
             }
         });
         return future;
     }
 
-    private CompletableFuture<Void> shutdownEventLoopGroup(EventLoopGroup eventLoopGroup, boolean immediately, String comment) {
+    private CompletableFuture<Void> shutdownEventLoopGroup(EventLoopGroup eventLoopGroup, int timeout, String comment) {
         CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-        GenericFutureListener<Future<Object>> futureListener = future -> {
+        eventLoopGroup.shutdownGracefully(0, timeout, TimeUnit.SECONDS).addListener(future -> {
             if (future.isSuccess()) {
                 logger.info(comment);
                 completableFuture.complete(null);
             } else {
                 completableFuture.completeExceptionally(future.cause());
             }
-        };
-        if (immediately) {
-            eventLoopGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).addListener(futureListener);
-        } else {
-            eventLoopGroup.shutdownGracefully().addListener(futureListener);
-        }
+        });
         return completableFuture;
     }
 

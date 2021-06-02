@@ -32,7 +32,7 @@ public class CarawayApplication {
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
-                caraway.asyncStop(true).whenComplete((v, e) -> loggerCtx.stop());
+                caraway.asyncStop(0).whenComplete((v, e) -> loggerCtx.stop());
             } else {
                 Thread shutdownHookThread = new Thread(CarawayApplication::close);
                 shutdownHookThread.setName("Caraway shutdown hook");
