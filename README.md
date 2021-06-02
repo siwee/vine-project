@@ -7,8 +7,8 @@ An asynchronous network proxy based on `netty`. Support `HTTP`/`SOCKS4`/`SOCKS5`
 - [x] HTTP
 - [x] HTTP Tunnel
 - [ ] HTTP MITM
-- [ ] SOCKS4
-- [ ] SOCKS5
+- [x] SOCKS4
+- [x] SOCKS5
 - [ ] Username/password authentication
 - [ ] GSSAPI authentication
 - [ ] Chain proxies
