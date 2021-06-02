@@ -9,6 +9,9 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
+import java.util.concurrent.RejectedExecutionException;
+
 /**
  * @author aomsweet
  */
@@ -62,8 +65,19 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close();
-        logger.error(cause.getMessage(), cause);
+        try {
+            if (cause instanceof IOException || cause instanceof RejectedExecutionException) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{}: {}", cause.getClass().getName(), cause.getMessage(), cause);
+                } else {
+                    logger.info("{}: {}", cause.getClass().getName(), cause.getMessage());
+                }
+            } else {
+                logger.error("{}: {}", cause.getClass().getName(), cause.getMessage(), cause);
+            }
+        } finally {
+            ctx.close();
+        }
     }
 
 }
