@@ -14,13 +14,13 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public class DirectProxyConnector implements ProxyConnector {
+public class DirectServerConnector implements ServerConnector {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(DirectProxyConnector.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(DirectServerConnector.class);
 
     Bootstrap bootstrap;
 
-    public DirectProxyConnector() {
+    public DirectServerConnector() {
         this.bootstrap = new Bootstrap()
             .channel(NioSocketChannel.class)
             .option(ChannelOption.TCP_NODELAY, true)
@@ -34,7 +34,7 @@ public class DirectProxyConnector implements ProxyConnector {
             });
     }
 
-    public DirectProxyConnector(Bootstrap bootstrap) {
+    public DirectServerConnector(Bootstrap bootstrap) {
         this.bootstrap = bootstrap;
     }
 

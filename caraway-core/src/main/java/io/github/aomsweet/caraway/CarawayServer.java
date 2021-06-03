@@ -21,7 +21,7 @@ public class CarawayServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
-    ProxyConnector connector;
+    ServerConnector connector;
     SocketAddress actualBoundAddress;
     SocketAddress preBoundAddress;
     int bossEventLoopGroupSize;
@@ -35,7 +35,7 @@ public class CarawayServer implements Closeable {
     public CarawayServer() {
         this.bossEventLoopGroupSize = 1;
         this.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
-        this.connector = new DirectProxyConnector();
+        this.connector = new DirectServerConnector();
     }
 
     public CompletionStage<Channel> start() {
@@ -157,7 +157,7 @@ public class CarawayServer implements Closeable {
         return completableFuture;
     }
 
-    public CarawayServer withConnector(ProxyConnector connector) {
+    public CarawayServer withConnector(ServerConnector connector) {
         this.connector = connector;
         return this;
     }
@@ -197,7 +197,7 @@ public class CarawayServer implements Closeable {
         return this;
     }
 
-    public ProxyConnector getConnector() {
+    public ServerConnector getConnector() {
         return connector;
     }
 

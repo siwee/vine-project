@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public interface ProxyConnector {
+public interface ServerConnector {
 
     Future<Channel> channel(InetSocketAddress socketAddress, EventLoopGroup eventLoopGroup);
 
