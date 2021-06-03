@@ -26,7 +26,7 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (relayChannel.isActive()) {
             if (logger.isDebugEnabled()) {
-                logger.debug("{} INACTIVE. CLOSING REPLAY CHANNEL {}", ctx.channel(), relayChannel);
+                logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
             }
             ChannelUtils.closeOnFlush(relayChannel);
         }
