@@ -59,8 +59,8 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
     public void relayDucking(Channel clientChannel, Channel serverChannel) {
         if (clientChannel.isActive()) {
             if (serverChannel.isActive()) {
-                clientChannel.pipeline().addLast(new RelayHandler(serverChannel));
-                serverChannel.pipeline().addLast(new RelayHandler(clientChannel));
+                clientChannel.pipeline().addLast(new ClientRelayHandler(serverChannel));
+                serverChannel.pipeline().addLast(new ServerRelayHandler(clientChannel));
             } else {
                 ChannelUtils.closeOnFlush(clientChannel);
             }

@@ -5,7 +5,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.RejectedExecutionException;
@@ -13,33 +12,33 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * @author aomsweet
  */
-public class RelayHandler extends ChannelInboundHandlerAdapter {
+public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(RelayHandler.class);
+    Channel relayChannel;
+    InternalLogger logger;
 
-    Channel replayChannel;
-
-    public RelayHandler(Channel replayChannel) {
-        this.replayChannel = replayChannel;
+    public RelayHandler(Channel relayChannel, InternalLogger logger) {
+        this.relayChannel = relayChannel;
+        this.logger = logger;
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (replayChannel.isActive()) {
+        if (relayChannel.isActive()) {
             if (logger.isDebugEnabled()) {
-                logger.debug("{} INACTIVE. CLOSING REPLAY CHANNEL {}", ctx.channel(), replayChannel);
+                logger.debug("{} INACTIVE. CLOSING REPLAY CHANNEL {}", ctx.channel(), relayChannel);
             }
-            ChannelUtils.closeOnFlush(replayChannel);
+            ChannelUtils.closeOnFlush(relayChannel);
         }
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (replayChannel.isActive()) {
-            replayChannel.writeAndFlush(msg);
+        if (relayChannel.isActive()) {
+            relayChannel.writeAndFlush(msg);
         } else {
             ReferenceCountUtil.release(msg);
-            ChannelUtils.closeOnFlush(replayChannel);
+            ChannelUtils.closeOnFlush(relayChannel);
             ctx.close();
         }
     }
@@ -54,10 +53,10 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
         boolean isWritable = ctx.channel().isWritable();
         if (logger.isDebugEnabled()) {
             logger.debug("{} WRITABILITY CHANGED. CURRENT STATUS: {}. {} {}", ctx.channel(),
-                isWritable ? "WRITABLE" : "NOT WRITABLE", replayChannel,
+                isWritable ? "WRITABLE" : "NOT WRITABLE", relayChannel,
                 isWritable ? "ENABLE AUTO READ" : "DISABLE AUTO READ");
         }
-        replayChannel.config().setAutoRead(isWritable);
+        relayChannel.config().setAutoRead(isWritable);
     }
 
     @Override
