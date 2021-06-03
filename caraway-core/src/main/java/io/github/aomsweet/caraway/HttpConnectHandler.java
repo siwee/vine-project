@@ -1,7 +1,6 @@
 package io.github.aomsweet.caraway;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContent;
@@ -13,8 +12,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -26,7 +23,7 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public class HttpConnectHandler extends ConnectHandler {
+public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpConnectHandler.class);
 
@@ -35,40 +32,39 @@ public class HttpConnectHandler extends ConnectHandler {
     boolean isSsl;
     boolean connected;
     final Queue<Object> queue;
-    InetSocketAddress remoteAddress;
+    InetSocketAddress serverAddress;
 
-    Channel inboundChannel;
-    Channel outboundChannel;
+    Channel clientChannel;
+    Channel serverChannel;
 
     public HttpConnectHandler(CarawayServer caraway) {
-        super(caraway);
+        super(caraway, logger);
         this.queue = new ArrayDeque<>(4);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
-            HttpRequest httpRequest = (HttpRequest) msg;
+            HttpRequest request = (HttpRequest) msg;
             if (logger.isDebugEnabled()) {
-                logger.debug(ctx.channel() + " Accept request: {}", httpRequest);
+                logger.debug(ctx.channel() + " Accept request: {}", request);
             }
-            InetSocketAddress remoteAddress = getRemoteAddress(httpRequest);
-            if (this.remoteAddress == null) {
-                this.remoteAddress = remoteAddress;
-                doConnect(ctx, httpRequest);
-            } else if (this.remoteAddress.equals(remoteAddress)) {
-                ctx.fireChannelRead(httpRequest);
+            InetSocketAddress serverAddress = getServerAddress0(request);
+            if (this.serverAddress == null) {
+                this.serverAddress = serverAddress;
+                doConnectServer(ctx, ctx.channel(), request);
+            } else if (this.serverAddress.equals(serverAddress)) {
+                ctx.fireChannelRead(request);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug(ctx.channel() + " Switch the remote address [{}] to [{}]",
-                        this.remoteAddress, remoteAddress);
+                        this.serverAddress, serverAddress);
                 }
-                this.remoteAddress = remoteAddress;
-                inboundChannel.pipeline().remove(RelayHandler.class);
-                outboundChannel.pipeline().remove(RelayHandler.class);
-                outboundChannel.writeAndFlush(ctx.alloc().buffer(0))
-                    .addListener(ChannelFutureListener.CLOSE);
-                doConnect(ctx, httpRequest);
+                this.serverAddress = serverAddress;
+                clientChannel.pipeline().remove(RelayHandler.class);
+                serverChannel.pipeline().remove(RelayHandler.class);
+                ChannelUtils.closeOnFlush(serverChannel);
+                doConnectServer(ctx, ctx.channel(), request);
             }
         } else if (msg instanceof HttpContent) {
             if (connected) {
@@ -83,43 +79,55 @@ public class HttpConnectHandler extends ConnectHandler {
         }
     }
 
-    public void doConnect(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+    @Override
+    Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         this.connected = false;
-        inboundChannel = ctx.channel();
-        inboundChannel.config().setAutoRead(false);
-        final ChannelPipeline inboundPipeline = inboundChannel.pipeline();
-        Promise<Channel> promise = ctx.executor().newPromise();
-        promise.addListener((GenericFutureListener<Future<Channel>>) connect -> {
-            if (connect.isSuccess()) {
-                outboundChannel = connect.getNow();
-                ChannelPipeline outboundPipeline = outboundChannel.pipeline();
-                if (isSsl) {
-                    outboundPipeline.addLast(getClientSslContext().newHandler(outboundChannel.alloc()));
-                }
-                outboundPipeline.addLast(new HttpRequestEncoder());
-                outboundChannel.writeAndFlush(httpRequest).addListener(future -> {
-                    if (future.isSuccess()) {
-                        connected = true;
-                        outboundPipeline.addLast(new RelayHandler(inboundChannel));
-                        inboundPipeline.addLast(new RelayHandler(outboundChannel));
-                        clearQueue(ctx);
-                        inboundChannel.config().setAutoRead(true);
-                    } else {
-                        ctx.close();
-                        outboundChannel.close();
-                        clearQueue(null);
-                        logger.error("{} Failed to write http request: {}",
-                            outboundPipeline, httpRequest, connect.cause());
-                    }
-                });
-            } else {
-                ctx.close();
-                clearQueue(null);
-                logger.error("{} Failed to connect to remote address [{}]",
-                    inboundChannel, remoteAddress, connect.cause());
+        ctx.channel().config().setAutoRead(false);
+        return super.doConnectServer(ctx, ctx.channel(), request);
+    }
+
+    @Override
+    void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
+        this.clientChannel = clientChannel;
+        this.serverChannel = serverChannel;
+        try {
+            ChannelPipeline serverPipeline = serverChannel.pipeline();
+            if (isSsl) {
+                serverPipeline.addLast(getClientSslContext().newHandler(serverChannel.alloc()));
             }
-        });
-        connector.channel(remoteAddress, inboundChannel.eventLoop(), promise);
+            serverPipeline.addLast(new HttpRequestEncoder());
+            serverChannel.writeAndFlush(request).addListener(future -> {
+                if (future.isSuccess()) {
+                    connected = true;
+                    relayDucking(clientChannel, serverChannel);
+                    clearQueue(ctx);
+                    clientChannel.config().setAutoRead(true);
+                } else {
+                    release(clientChannel, serverChannel);
+                    logger.error("{} Failed to request server: {}",
+                        serverChannel, serverAddress, future.cause());
+                }
+            });
+        } catch (SSLException e) {
+            release(clientChannel, serverChannel);
+        }
+    }
+
+    @Override
+    void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
+        ChannelUtils.closeOnFlush(clientChannel);
+        clearQueue(null);
+    }
+
+    @Override
+    InetSocketAddress getServerAddress(HttpRequest request) {
+        return serverAddress;
+    }
+
+    @Override
+    public void release(Channel clientChannel, Channel serverChannel) {
+        clearQueue(null);
+        super.release(clientChannel, serverChannel);
     }
 
     public void clearQueue(ChannelHandlerContext ctx) {
@@ -133,7 +141,7 @@ public class HttpConnectHandler extends ConnectHandler {
         }
     }
 
-    public InetSocketAddress getRemoteAddress(HttpRequest httpRequest) {
+    public InetSocketAddress getServerAddress0(HttpRequest httpRequest) {
         String uri = httpRequest.uri();
         String host;
         if (uri.charAt(0) == '/') {
@@ -151,11 +159,11 @@ public class HttpConnectHandler extends ConnectHandler {
         if (host == null) {
             throw new RuntimeException("Bad request: " + httpRequest.method() + ' ' + uri + ' ' + httpRequest.protocolVersion());
         } else {
-            return getRemoteAddress(host, isSsl ? 443 : 80);
+            return getServerAddress0(host, isSsl ? 443 : 80);
         }
     }
 
-    private InetSocketAddress getRemoteAddress(String host, int defaultPort) {
+    private InetSocketAddress getServerAddress0(String host, int defaultPort) {
         int index = host.indexOf(':');
         if (index == -1) {
             return InetSocketAddress.createUnresolved(host, defaultPort);
@@ -163,12 +171,6 @@ public class HttpConnectHandler extends ConnectHandler {
             return InetSocketAddress.createUnresolved(host.substring(0, index),
                 Integer.parseInt(host.substring(index + 1)));
         }
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close();
-        logger.error(cause.getMessage(), cause);
     }
 
     public static SslContext getClientSslContext() throws SSLException {
