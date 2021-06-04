@@ -21,7 +21,7 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksM
     public static final DefaultSocks5PasswordAuthResponse AUTH_SUCCESS = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS);
     public static final DefaultSocks5PasswordAuthResponse AUTH_FAILURE = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE);
 
-    boolean enableAuthorization = false;
+    boolean enableAuthorization;
 
     CarawayServer caraway;
     ProxyAuthenticator proxyAuthenticator;
