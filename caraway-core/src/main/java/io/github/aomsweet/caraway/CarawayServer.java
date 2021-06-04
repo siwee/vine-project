@@ -22,6 +22,7 @@ public class CarawayServer implements Closeable {
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
     ServerConnector connector;
+    ProxyAuthenticator proxyAuthenticator;
     SocketAddress actualBoundAddress;
     SocketAddress preBoundAddress;
     int bossEventLoopGroupSize;
@@ -157,8 +158,13 @@ public class CarawayServer implements Closeable {
         return completableFuture;
     }
 
-    public CarawayServer withConnector(ServerConnector connector) {
+    public CarawayServer withServerConnector(ServerConnector connector) {
         this.connector = connector;
+        return this;
+    }
+
+    public CarawayServer withProxyAuthenticator(ProxyAuthenticator proxyAuthenticator) {
+        this.proxyAuthenticator = proxyAuthenticator;
         return this;
     }
 
@@ -199,6 +205,10 @@ public class CarawayServer implements Closeable {
 
     public ServerConnector getConnector() {
         return connector;
+    }
+
+    public ProxyAuthenticator getProxyAuthenticator() {
+        return proxyAuthenticator;
     }
 
     public SocketAddress getActualBoundAddress() {
