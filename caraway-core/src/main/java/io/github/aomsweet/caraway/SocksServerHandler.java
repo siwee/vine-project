@@ -53,7 +53,8 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksM
             case SOCKS5:
                 if (socksRequest instanceof Socks5InitialRequest) {
                     pipeline.remove(Socks5InitialRequestDecoder.class);
-                    if (enableAuthorization) {
+                    if (enableAuthorization ||
+                        ((Socks5InitialRequest) socksRequest).authMethods().contains(Socks5AuthMethod.PASSWORD)) {
                         pipeline.addFirst(new Socks5PasswordAuthRequestDecoder());
                         ctx.writeAndFlush(PASSWORD_RESPONSE);
                     } else {
