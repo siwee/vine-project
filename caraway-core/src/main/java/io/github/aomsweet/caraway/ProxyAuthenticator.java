@@ -2,6 +2,8 @@ package io.github.aomsweet.caraway;
 
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequest;
 
+import java.util.Base64;
+
 /**
  * @author aomsweet
  */
@@ -14,11 +16,12 @@ public interface ProxyAuthenticator {
             int i = authorization.indexOf(' ');
             String token = i > -1 && ++i < authorization.length()
                 ? authorization.substring(i) : authorization;
-            i = token.indexOf(':');
+            String decode = new String(Base64.getDecoder().decode(token));
+            i = decode.indexOf(':');
             if (i > -1) {
-                return authenticate(token.substring(0, i), token.substring(++i));
+                return authenticate(decode.substring(0, i), decode.substring(++i));
             } else {
-                return authenticate(null, token);
+                return authenticate(null, decode);
             }
         }
     }
