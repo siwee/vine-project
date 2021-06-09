@@ -1,8 +1,12 @@
 package io.github.aomsweet.caraway;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 
@@ -11,6 +15,8 @@ import io.netty.handler.codec.http.HttpRequest;
  */
 @ChannelHandler.Sharable
 public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> {
+
+    public static final byte[] UNAUTHORIZED_BYTES = "HTTP/1.1 407 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Access to the staging site\"\r\n\r\n".getBytes();
 
     CarawayServer caraway;
 
@@ -23,6 +29,17 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> 
         if (httpRequest.decoderResult().isFailure()) {
             ctx.close();
         } else {
+            ProxyAuthenticator proxyAuthenticator = caraway.getProxyAuthenticator();
+            if (proxyAuthenticator != null) {
+                HttpHeaders headers = httpRequest.headers();
+                String authorization = headers.get(HttpHeaderNames.PROXY_AUTHORIZATION);
+                if (!proxyAuthenticator.authenticate(authorization)) {
+                    ByteBuf byteBuf = ctx.alloc().buffer(UNAUTHORIZED_BYTES.length);
+                    ctx.writeAndFlush(byteBuf.writeBytes(UNAUTHORIZED_BYTES)).addListener(ChannelFutureListener.CLOSE);
+                    return;
+                }
+            }
+
             if (HttpMethod.CONNECT.equals(httpRequest.method())) {
                 ctx.pipeline().addLast(new HttpTunnelConnectHandler(caraway));
             } else {
