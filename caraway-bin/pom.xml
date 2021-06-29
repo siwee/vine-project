@@ -21,16 +21,6 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>checker-framework</artifactId>
-                    <groupId>edu.washington.cs.types.checker</groupId>
-                </exclusion>
-                <exclusion>
-                    <artifactId>javax.mail</artifactId>
-                    <groupId>com.sun.mail</groupId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.fusesource.jansi/jansi -->

@@ -2,7 +2,6 @@ package io.github.aomsweet.caraway.app;
 
 import ch.qos.logback.classic.LoggerContext;
 import io.github.aomsweet.caraway.CarawayServer;
-import org.fusesource.jansi.AnsiConsole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,10 +16,6 @@ public class CarawayApplication {
     private static final LoggerContext loggerCtx = (LoggerContext) LoggerFactory.getILoggerFactory();
     private static final Logger logger = LoggerFactory.getLogger(CarawayApplication.class);
 
-    static {
-        AnsiConsole.systemInstall();
-    }
-
     private static CarawayServer caraway;
 
     public static void main(String[] args) {
@@ -29,6 +24,7 @@ public class CarawayApplication {
         logger.info("Starting {} on {} with process id {} ({})", CarawayApplication.class.getSimpleName(),
             name.substring(name.indexOf('@') + 1), mx.getPid(), System.getProperty("user.dir"));
         caraway = new CarawayServer()
+            // .withProxyAuthenticator((username, password) -> "admin".equals(username) && "admin".equals(password))
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
