@@ -4,6 +4,7 @@ import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.app.logback.LogbackContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.misc.Signal;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -31,6 +32,12 @@ public class CarawayApplication {
             if (channel == null) {
                 caraway.asyncStop(0).whenComplete((v, e) -> logbackContext.stop());
             } else {
+                /*
+                 Register a signal handler for Ctrl-C that runs the shutdown hooks
+                 https://github.com/oracle/graal/issues/465
+                 */
+                Signal.handle(new Signal("INT"), sig -> System.exit(0));
+
                 Thread shutdownHookThread = new Thread(CarawayApplication::close);
                 shutdownHookThread.setName("Caraway shutdown hook");
                 Runtime.getRuntime().addShutdownHook(shutdownHookThread);
