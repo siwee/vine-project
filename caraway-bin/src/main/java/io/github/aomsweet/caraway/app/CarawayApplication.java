@@ -1,7 +1,7 @@
 package io.github.aomsweet.caraway.app;
 
-import ch.qos.logback.classic.LoggerContext;
 import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.app.logback.LogbackContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,10 +13,11 @@ import java.lang.management.RuntimeMXBean;
  */
 public class CarawayApplication {
 
-    private static final LoggerContext loggerCtx = (LoggerContext) LoggerFactory.getILoggerFactory();
-    private static final Logger logger = LoggerFactory.getLogger(CarawayApplication.class);
+    private static final LogbackContext logbackContext = new LogbackContext();
 
     private static CarawayServer caraway;
+
+    private static final Logger logger = LoggerFactory.getLogger(CarawayApplication.class);
 
     public static void main(String[] args) {
         RuntimeMXBean mx = ManagementFactory.getRuntimeMXBean();
@@ -28,7 +29,7 @@ public class CarawayApplication {
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
-                caraway.asyncStop(0).whenComplete((v, e) -> loggerCtx.stop());
+                caraway.asyncStop(0).whenComplete((v, e) -> logbackContext.stop());
             } else {
                 Thread shutdownHookThread = new Thread(CarawayApplication::close);
                 shutdownHookThread.setName("Caraway shutdown hook");
@@ -39,7 +40,7 @@ public class CarawayApplication {
 
     public static void close() {
         caraway.close();
-        loggerCtx.stop();
+        logbackContext.stop();
     }
 
 }
