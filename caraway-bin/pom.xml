@@ -50,6 +50,15 @@
             <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.graalvm.nativeimage/svm -->
+        <dependency>
+            <groupId>org.graalvm.nativeimage</groupId>
+            <artifactId>svm</artifactId>
+            <version>21.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -122,6 +131,8 @@
                                 <buildArg>--no-fallback</buildArg>
                                 <buildArg>--report-unsupported-elements-at-runtime</buildArg>
                                 <buildArg>--allow-incomplete-classpath</buildArg>
+                                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                                <!--<buildArg>-H:+TraceClassInitialization</buildArg>-->
                                 <!--<buildArg>-H:IncludeResources=logback.xml</buildArg>-->
                                 <!--<buildArg>&#45;&#45;trace-class-initialization=ch.qos.logback.core.util.Loader</buildArg>-->
 
@@ -152,12 +163,13 @@
                                 <buildArg>--initialize-at-run-time=io.netty.buffer.ByteBufAllocator</buildArg>
                                 <buildArg>--initialize-at-run-time=io.netty.buffer.ByteBufUtil</buildArg>
 
-                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.handler.ssl.JettyAlpnSslEngine$ServerEngine</buildArg>-->
-                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.handler.ssl.JettyAlpnSslEngine$ClientEngine</buildArg>-->
-                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.util.internal.logging.Log4JLogger</buildArg>-->
-                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.handler.ssl.util.ThreadLocalInsecureRandom</buildArg>-->
+                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.JettyAlpnSslEngine$ServerEngine</buildArg>
+                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.JettyAlpnSslEngine$ClientEngine</buildArg>
+                                <buildArg>--initialize-at-run-time=io.netty.util.internal.logging.Log4JLogger</buildArg>
+                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.util.ThreadLocalInsecureRandom</buildArg>
                                 <buildArg>--initialize-at-run-time=io.netty.handler.ssl.BouncyCastleAlpnSslUtils</buildArg>
-                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.handler.ssl.JettyNpnSslEngine</buildArg>-->
+                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.JettyNpnSslEngine</buildArg>
+                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.internal.tcnative.SSLPrivateKeyMethod</buildArg>-->
                             </buildArgs>
                         </configuration>
                     </plugin>
