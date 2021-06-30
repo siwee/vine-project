@@ -20,11 +20,6 @@
     </properties>
 
     <dependencies>
-        <!--<dependency>-->
-        <!--    <groupId>io.netty</groupId>-->
-        <!--    <artifactId>netty-tcnative</artifactId>-->
-        <!--    <version>2.0.40.Final</version>-->
-        <!--</dependency>-->
 
         <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
         <dependency>
@@ -55,7 +50,7 @@
         <dependency>
             <groupId>org.graalvm.nativeimage</groupId>
             <artifactId>svm</artifactId>
-            <version>21.1.0</version>
+            <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -132,12 +127,10 @@
                                 <buildArg>--report-unsupported-elements-at-runtime</buildArg>
                                 <buildArg>--allow-incomplete-classpath</buildArg>
                                 <buildArg>-H:+ReportExceptionStackTraces</buildArg>
-                                <!--<buildArg>-H:+TraceClassInitialization</buildArg>-->
-                                <!--<buildArg>-H:IncludeResources=logback.xml</buildArg>-->
-                                <!--<buildArg>&#45;&#45;trace-class-initialization=ch.qos.logback.core.util.Loader</buildArg>-->
 
                                 <buildArg>--initialize-at-build-time=org.slf4j.impl.StaticLoggerBinder</buildArg>
                                 <buildArg>--initialize-at-build-time=org.slf4j.LoggerFactory</buildArg>
+                                <buildArg>--initialize-at-build-time=org.slf4j.MDC</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.classic.Logger</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.core.spi.AppenderAttachableImpl</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.core.status.StatusBase</buildArg>
@@ -145,10 +138,6 @@
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.core.status.InfoStatus</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.classic.PatternLayout</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.core.CoreConstants</buildArg>
-                                <buildArg>--initialize-at-build-time=org.fusesource.jansi.io.AnsiOutputStream</buildArg>
-                                <buildArg>--initialize-at-build-time=org.fusesource.jansi.internal.CLibrary</buildArg>
-                                <buildArg>--initialize-at-build-time=org.fusesource.jansi.internal.OSInfo</buildArg>
-                                <buildArg>--initialize-at-build-time=org.slf4j.MDC</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.core.pattern.parser.Parser</buildArg>
                                 <buildArg>--initialize-at-build-time=ch.qos.logback.core.util.Loader</buildArg>
 
@@ -162,14 +151,6 @@
                                 <buildArg>--initialize-at-run-time=io.netty.buffer.PooledByteBufAllocator</buildArg>
                                 <buildArg>--initialize-at-run-time=io.netty.buffer.ByteBufAllocator</buildArg>
                                 <buildArg>--initialize-at-run-time=io.netty.buffer.ByteBufUtil</buildArg>
-
-                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.JettyAlpnSslEngine$ServerEngine</buildArg>
-                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.JettyAlpnSslEngine$ClientEngine</buildArg>
-                                <buildArg>--initialize-at-run-time=io.netty.util.internal.logging.Log4JLogger</buildArg>
-                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.util.ThreadLocalInsecureRandom</buildArg>
-                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.BouncyCastleAlpnSslUtils</buildArg>
-                                <buildArg>--initialize-at-run-time=io.netty.handler.ssl.JettyNpnSslEngine</buildArg>
-                                <!--<buildArg>&#45;&#45;initialize-at-run-time=io.netty.internal.tcnative.SSLPrivateKeyMethod</buildArg>-->
                             </buildArgs>
                         </configuration>
                     </plugin>
