@@ -18,10 +18,10 @@ import java.lang.management.RuntimeMXBean;
 /**
  * @author aomsweet
  */
-public class CarawayApplication {
+public class CarawayLauncher {
 
     private static final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-    private static final Logger logger = LoggerFactory.getLogger(CarawayApplication.class);
+    private static final Logger logger = LoggerFactory.getLogger(CarawayLauncher.class);
 
     public static void main(String[] args) {
         /*
