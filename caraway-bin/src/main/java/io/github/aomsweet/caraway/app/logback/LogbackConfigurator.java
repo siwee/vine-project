@@ -25,9 +25,9 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
 
     @Override
     public void configure(LoggerContext loggerContext) {
-        ConsoleAppender<ILoggingEvent> consoleAppender = new ConsoleAppender<>();
+        AnsiConsoleAppender<ILoggingEvent> consoleAppender = new AnsiConsoleAppender<>();
         consoleAppender.setContext(loggerContext);
-        consoleAppender.setName(ConsoleAppender.DEFAULT_NAME);
+        consoleAppender.setName(AnsiConsoleAppender.DEFAULT_NAME);
 
         LayoutWrappingEncoder<ILoggingEvent> encoder = new LayoutWrappingEncoder<>();
         encoder.setContext(loggerContext);

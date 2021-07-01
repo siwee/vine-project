@@ -13,7 +13,7 @@ import java.util.Arrays;
 /**
  * @author aomsweet
  */
-public class ConsoleAppender<E> extends OutputStreamAppender<E> {
+public class AnsiConsoleAppender<E> extends OutputStreamAppender<E> {
 
     public static final String DEFAULT_NAME = "console";
 

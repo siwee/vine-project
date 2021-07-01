@@ -6,7 +6,7 @@ import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.caraway.CarawayServer;
-import io.github.aomsweet.caraway.app.logback.ConsoleAppender;
+import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,8 +55,8 @@ public class CarawayLauncher {
     public static void logbackConfigure() {
         ch.qos.logback.classic.Logger rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.INFO);
-        ConsoleAppender<ILoggingEvent> consoleAppender = ((ConsoleAppender<ILoggingEvent>) rootLogger
-            .getAppender(ConsoleAppender.DEFAULT_NAME));
+        AnsiConsoleAppender<ILoggingEvent> consoleAppender = ((AnsiConsoleAppender<ILoggingEvent>) rootLogger
+            .getAppender(AnsiConsoleAppender.DEFAULT_NAME));
 
         String pattern = "%d{yyyy-MM-dd HH:mm:ss:SSS} | %highlight(%-5level) %green([%thread]) %boldMagenta(%logger{36}) - %cyan(%msg %n)";
 

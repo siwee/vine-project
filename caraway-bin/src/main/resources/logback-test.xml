@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="true">
 
-    <appender name="STDOUT" class="io.github.aomsweet.caraway.app.logback.ConsoleAppender">
+    <appender name="STDOUT" class="io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender">
         <encoder>
             <pattern>%d{MM-dd HH:mm:ss:SSS} | %highlight(%-5level) %green([%thread]) %boldMagenta(%logger{36}) - %cyan(%msg %n)</pattern>
             <!--<pattern>%highlight(%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %n)</pattern>-->
