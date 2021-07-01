@@ -4,6 +4,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -58,16 +59,16 @@ public class CarawayServer implements Closeable {
         ServerBootstrap bootstrap = new ServerBootstrap()
             .group(acceptorEventLoopGroup, workerEventLoopGroup)
             .channel(NioServerSocketChannel.class);
-        if (logger.isDebugEnabled()) {
-            bootstrap.handler(new LoggingHandler());
+        if (logger.isTraceEnabled()) {
+            bootstrap.handler(new LoggingHandler(LogLevel.TRACE));
         }
         PortUnificationServerHandler unificationServerHandler = new PortUnificationServerHandler(this);
         bootstrap.childHandler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                if (logger.isDebugEnabled()) {
-                    pipeline.addLast(new LoggingHandler());
+                if (logger.isTraceEnabled()) {
+                    pipeline.addLast(new LoggingHandler(LogLevel.TRACE));
                 }
                 pipeline.addLast(unificationServerHandler);
             }

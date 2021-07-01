@@ -3,6 +3,7 @@ package io.github.aomsweet.caraway;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -27,8 +28,8 @@ public class DirectServerConnector implements ServerConnector {
             .handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    if (logger.isDebugEnabled()) {
-                        ch.pipeline().addLast(new LoggingHandler());
+                    if (logger.isTraceEnabled()) {
+                        ch.pipeline().addLast(new LoggingHandler(LogLevel.TRACE));
                     }
                 }
             });
