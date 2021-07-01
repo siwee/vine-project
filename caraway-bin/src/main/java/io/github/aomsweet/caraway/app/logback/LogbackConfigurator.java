@@ -3,7 +3,6 @@ package io.github.aomsweet.caraway.app.logback;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.layout.TTLLLayout;
 import ch.qos.logback.classic.spi.Configurator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -14,6 +13,12 @@ import ch.qos.logback.core.spi.ContextAwareBase;
  * @author aomsweet
  */
 public class LogbackConfigurator extends ContextAwareBase implements Configurator {
+
+    private static boolean enabled = false;
+
+    public static boolean isEnabled() {
+        return enabled;
+    }
 
     public LogbackConfigurator() {
     }
@@ -39,5 +44,7 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
         Logger rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.DEBUG);
         rootLogger.addAppender(consoleAppender);
+
+        enabled = true;
     }
 }

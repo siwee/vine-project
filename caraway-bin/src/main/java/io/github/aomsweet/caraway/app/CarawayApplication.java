@@ -7,6 +7,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.app.logback.ConsoleAppender;
+import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -23,24 +24,22 @@ public class CarawayApplication {
     private static final Logger logger = LoggerFactory.getLogger(CarawayApplication.class);
 
     public static void main(String[] args) {
-        logbackConfigure();
-
+        /*
+         Register a signal handler for Ctrl-C that runs the shutdown hooks
+         https://github.com/oracle/graal/issues/465
+         */
+        Signal.handle(new Signal("INT"), s -> System.exit(0));
+        if (LogbackConfigurator.isEnabled()) {
+            logbackConfigure();
+        }
         RuntimeMXBean mx = ManagementFactory.getRuntimeMXBean();
-        String name = mx.getName();
-        logger.info("Starting Caraway on {} with process id {} ({})",
-            name.substring(name.indexOf('@') + 1), mx.getPid(), System.getProperty("user.dir"));
+        logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer()
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
                 caraway.asyncStop(0).whenComplete((v, e) -> loggerContext.stop());
             } else {
-                /*
-                 Register a signal handler for Ctrl-C that runs the shutdown hooks
-                 https://github.com/oracle/graal/issues/465
-                 */
-                Signal.handle(new Signal("INT"), sig -> System.exit(0));
-
                 Thread shutdownHookThread = new Thread(() -> close(caraway));
                 shutdownHookThread.setName("Caraway shutdown hook");
                 Runtime.getRuntime().addShutdownHook(shutdownHookThread);
