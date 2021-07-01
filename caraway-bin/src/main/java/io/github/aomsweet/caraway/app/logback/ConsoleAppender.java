@@ -15,6 +15,8 @@ import java.util.Arrays;
  */
 public class ConsoleAppender<E> extends OutputStreamAppender<E> {
 
+    public static final String DEFAULT_NAME = "console";
+
     protected ConsoleTarget target = ConsoleTarget.SystemOut;
     protected boolean withJansi = false;
 
