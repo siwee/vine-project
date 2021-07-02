@@ -10,9 +10,11 @@ import com.oracle.svm.core.jdk.JDK8OrEarlier;
 import io.netty.bootstrap.AbstractBootstrapConfig;
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.*;
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.ssl.*;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -29,6 +31,8 @@ import java.security.Provider;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingDeque;
+
+import static io.netty.handler.codec.http.HttpHeaderValues.*;
 
 /**
  * This substitution avoid having loggers added to the build
@@ -56,7 +60,7 @@ final class Target_io_netty_handler_ssl_SslProvider {
             case OPENSSL_REFCNT:
                 return false;
             default:
-                throw new Error("SslProvider unsupported on Quarkus " + provider);
+                throw new Error("SslProvider unsupported on Caraway " + provider);
         }
     }
 }
@@ -69,13 +73,15 @@ final class Target_io_netty_handler_ssl_JdkAlpnApplicationProtocolNegotiator {
     }
 }
 
-/** Hardcode io.netty.handler.ssl.OpenSsl as non-available */
+/**
+ * Hardcode io.netty.handler.ssl.OpenSsl as non-available
+ */
 @TargetClass(className = "io.netty.handler.ssl.OpenSsl")
 final class Target_io_netty_handler_ssl_OpenSsl {
 
     @Alias
     @RecomputeFieldValue(kind = Kind.FromAlias)
-    private static Throwable UNAVAILABILITY_CAUSE = new RuntimeException("OpenSsl unsupported on Quarkus");
+    private static Throwable UNAVAILABILITY_CAUSE = new RuntimeException("OpenSsl unsupported on Caraway");
 
     @Alias
     @RecomputeFieldValue(kind = Kind.FromAlias)
@@ -172,7 +178,8 @@ final class Target_io_netty_handler_ssl_JdkAlpnApplicationProtocolNegotiator_Alp
     @Substitute
     public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
             JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
-        return (SSLEngine) (Object) new Target_io_netty_handler_ssl_JdkAlpnSslEngine(engine, applicationNegotiator, isServer);
+        return (SSLEngine) (Object) new Target_io_netty_handler_ssl_JdkAlpnSslEngine(engine, applicationNegotiator,
+                isServer);
     }
 
 }
@@ -228,7 +235,8 @@ final class Target_io_netty_handler_ssl_SslContext {
 
     @Substitute
     static SslContext newServerContextInternal(SslProvider provider, Provider sslContextProvider,
-            X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
+            X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+            X509Certificate[] keyCertChain,
             PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
             CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout,
             ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp, String keyStoreType,
@@ -243,10 +251,12 @@ final class Target_io_netty_handler_ssl_SslContext {
     }
 
     @Substitute
-    static SslContext newClientContextInternal(SslProvider provider, Provider sslContextProvider, X509Certificate[] trustCert,
+    static SslContext newClientContextInternal(SslProvider provider, Provider sslContextProvider,
+            X509Certificate[] trustCert,
             TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
             KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-            ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout, boolean enableOcsp,
+            ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout,
+            boolean enableOcsp,
             String keyStoreType, Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         if (enableOcsp) {
             throw new IllegalArgumentException("OCSP is not supported with this SslProvider: " + provider);
@@ -291,11 +301,11 @@ final class Target_io_netty_handler_ssl_JdkSslContext {
                     //                    .append(config.selectorFailureBehavior()).append(" failure behavior").toString());
                     //                }
                     SelectorFailureBehavior behavior = config.selectorFailureBehavior();
-                    if (behavior == SelectorFailureBehavior.FATAL_ALERT)
+                    if (behavior == SelectorFailureBehavior.FATAL_ALERT) {
                         return new JdkAlpnApplicationProtocolNegotiator(true, config.supportedProtocols());
-                    else if (behavior == SelectorFailureBehavior.NO_ADVERTISE)
+                    } else if (behavior == SelectorFailureBehavior.NO_ADVERTISE) {
                         return new JdkAlpnApplicationProtocolNegotiator(false, config.supportedProtocols());
-                    else {
+                    } else {
                         throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
                                 .append(config.selectorFailureBehavior()).append(" failure behavior").toString());
                     }
@@ -307,12 +317,14 @@ final class Target_io_netty_handler_ssl_JdkSslContext {
                             return new JdkAlpnApplicationProtocolNegotiator(true, config.supportedProtocols());
                         default:
                             throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
-                                    .append(config.selectedListenerFailureBehavior()).append(" failure behavior").toString());
+                                    .append(config.selectedListenerFailureBehavior()).append(" failure behavior")
+                                    .toString());
                     }
                 }
             default:
                 throw new UnsupportedOperationException(
-                        new StringBuilder("JDK provider does not support ").append(config.protocol()).append(" protocol")
+                        new StringBuilder("JDK provider does not support ").append(config.protocol())
+                                .append(" protocol")
                                 .toString());
         }
     }
@@ -391,7 +403,7 @@ final class Target_io_netty_channel_nio_NioEventLoop {
 final class Target_io_netty_buffer_AbstractReferenceCountedByteBuf {
 
     @Alias
-    @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.FieldOffset, name = "refCnt")
+    @RecomputeFieldValue(kind = Kind.FieldOffset, name = "refCnt")
     private static long REFCNT_FIELD_OFFSET;
 }
 
@@ -399,7 +411,7 @@ final class Target_io_netty_buffer_AbstractReferenceCountedByteBuf {
 final class Target_io_netty_util_AbstractReferenceCounted {
 
     @Alias
-    @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.FieldOffset, name = "refCnt")
+    @RecomputeFieldValue(kind = Kind.FieldOffset, name = "refCnt")
     private static long REFCNT_FIELD_OFFSET;
 }
 
@@ -463,11 +475,11 @@ final class Target_io_netty_util_internal_NativeLibraryLoader {
 final class Target_io_netty_buffer_EmptyByteBuf {
 
     @Alias
-    @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.Reset)
+    @RecomputeFieldValue(kind = Kind.Reset)
     private static ByteBuffer EMPTY_BYTE_BUFFER;
 
     @Alias
-    @RecomputeFieldValue(kind = RecomputeFieldValue.Kind.Reset)
+    @RecomputeFieldValue(kind = Kind.Reset)
     private static long EMPTY_BYTE_BUFFER_ADDRESS;
 
     @Substitute
@@ -499,6 +511,45 @@ final class Target_io_netty_buffer_EmptyByteBuf {
         }
     }
 
+}
+
+// We need to delete this class but we let GraalVM dead code elimination do it for us.
+// Otherwise it causes a problem when --report-unsupported-elements-at-runtime is enabled:
+// when trying to delete the class, GraalVM throws a java.lang.NoClassDefFoundError: Lcom/aayushatharva/brotli4j/decoder/DecoderJNI$Wrapper;
+// While we recommend not using this option, some extensions out there are using it.
+//@TargetClass(className = "io.netty.handler.codec.compression.BrotliDecoder")
+//@Delete
+//final class Target_BrotliDecoder {
+//
+//}
+
+@TargetClass(className = "io.netty.handler.codec.http.HttpContentDecompressor")
+final class Target_io_netty_handler_codec_http_HttpContentDecompressor {
+
+    @Alias
+    private boolean strict;
+
+    @Alias
+    protected ChannelHandlerContext ctx;
+
+    @Substitute
+    protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
+        if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
+                X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+        }
+        if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
+                X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
+            final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
+            // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(wrapper));
+        }
+
+        // 'identity' or unsupported
+        return null;
+    }
 }
 
 class NettySubstitutions {
