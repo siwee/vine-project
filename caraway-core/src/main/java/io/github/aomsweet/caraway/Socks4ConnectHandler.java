@@ -3,9 +3,7 @@ package io.github.aomsweet.caraway;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
-import io.netty.handler.codec.socksx.v4.Socks4CommandRequest;
-import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
+import io.netty.handler.codec.socksx.v4.*;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -27,7 +25,18 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof Socks4CommandRequest) {
-            doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
+            Socks4CommandRequest request = (Socks4CommandRequest) msg;
+            if (request.decoderResult().isSuccess()) {
+                if (request.type() == Socks4CommandType.CONNECT) {
+                    doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
+                } else {
+                    logger.error("Unsupported Socks4 {} command.", request.type());
+                    ctx.close();
+                }
+            } else {
+                logger.error("Bad socks4 request. {}", ctx.channel());
+                ctx.close();
+            }
         } else {
             ReferenceCountUtil.release(msg);
             ctx.close();
@@ -38,7 +47,9 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks4CommandRequest request) {
         clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
             if (future.isSuccess()) {
-                clientChannel.pipeline().remove(Socks4ConnectHandler.this);
+                clientChannel.pipeline().remove(Socks4ServerDecoder.class);
+                clientChannel.pipeline().remove(Socks4ServerEncoder.INSTANCE);
+                clientChannel.pipeline().remove(this);
                 relayDucking(clientChannel, serverChannel);
             } else {
                 release(clientChannel, serverChannel);

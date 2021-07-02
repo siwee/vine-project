@@ -61,6 +61,9 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
             if (serverChannel.isActive()) {
                 clientChannel.pipeline().addLast(new ClientRelayHandler(serverChannel));
                 serverChannel.pipeline().addLast(new ServerRelayHandler(clientChannel));
+
+                System.err.println("clientChannel channel: " + clientChannel.pipeline());
+                System.err.println("serverChannel channel: " + serverChannel.pipeline());
             } else {
                 ChannelUtils.closeOnFlush(clientChannel);
             }
