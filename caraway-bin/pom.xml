@@ -121,7 +121,7 @@
                         </executions>
                         <configuration>
                             <skip>false</skip>
-                            <imageName>${build.finalName}</imageName>
+                            <imageName>${project.build.finalName}</imageName>
                             <mainClass>${exec.mainClass}</mainClass>
                         </configuration>
                     </plugin>
