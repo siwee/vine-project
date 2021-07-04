@@ -3,9 +3,10 @@ package io.github.aomsweet.caraway;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
-import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
-import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.socksx.SocksMessage;
+import io.netty.handler.codec.socksx.v5.*;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -16,15 +17,53 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks5ConnectHandler.class);
 
+    public static final DefaultSocks5InitialResponse NO_AUTH_RESPONSE = new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH);
+    public static final DefaultSocks5InitialResponse PASSWORD_RESPONSE = new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD);
+
+    public static final DefaultSocks5PasswordAuthResponse AUTH_SUCCESS = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS);
+    public static final DefaultSocks5PasswordAuthResponse AUTH_FAILURE = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE);
+
     public Socks5ConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof Socks5CommandRequest) {
-            doConnectServer(ctx, ctx.channel(), (Socks5CommandRequest) msg);
+        if (msg instanceof SocksMessage) {
+            if (((SocksMessage) msg).decoderResult().isSuccess()) {
+                ChannelPipeline pipeline = ctx.pipeline();
+                ProxyAuthenticator proxyAuthenticator = caraway.getProxyAuthenticator();
+                if (msg instanceof Socks5InitialRequest) {
+                    pipeline.remove(Socks5InitialRequestDecoder.class);
+                    if (proxyAuthenticator != null ||
+                        ((Socks5InitialRequest) msg).authMethods().contains(Socks5AuthMethod.PASSWORD)) {
+                        pipeline.addFirst(new Socks5PasswordAuthRequestDecoder());
+                        ctx.writeAndFlush(PASSWORD_RESPONSE);
+                    } else {
+                        pipeline.addFirst(new Socks5CommandRequestDecoder());
+                        ctx.writeAndFlush(NO_AUTH_RESPONSE);
+                    }
+                } else if (msg instanceof Socks5PasswordAuthRequest) {
+                    pipeline.remove(Socks5PasswordAuthRequestDecoder.class);
+                    pipeline.addFirst(new Socks5CommandRequestDecoder());
+                    DefaultSocks5PasswordAuthResponse authResponse = proxyAuthenticator == null
+                        || proxyAuthenticator.authenticate((Socks5PasswordAuthRequest) msg)
+                        ? AUTH_SUCCESS : AUTH_FAILURE;
+                    ctx.writeAndFlush(authResponse);
+                } else if (msg instanceof Socks5CommandRequest) {
+                    pipeline.remove(Socks5CommandRequestDecoder.class);
+                    Socks5CommandRequest socks5CmdRequest = (Socks5CommandRequest) msg;
+                    if (socks5CmdRequest.type() == Socks5CommandType.CONNECT) {
+                        doConnectServer(ctx, ctx.channel(), (Socks5CommandRequest) msg);
+                    } else {
+                        ctx.close();
+                    }
+                }
+            } else {
+                ctx.close();
+            }
         } else {
+            ReferenceCountUtil.release(msg);
             ctx.close();
         }
     }
@@ -35,6 +74,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
             request.dstAddrType(), request.dstAddr(), request.dstPort());
         clientChannel.writeAndFlush(response).addListener(future -> {
             if (future.isSuccess()) {
+                ctx.pipeline().remove(Socks5ServerEncoder.class);
                 ctx.pipeline().remove(Socks5ConnectHandler.this);
                 relayDucking(clientChannel, serverChannel);
             } else {

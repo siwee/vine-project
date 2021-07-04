@@ -25,14 +25,14 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
 
     CarawayServer caraway;
     HttpServerHandler httpServerHandler;
-    SocksServerHandler socksServerHandler;
 
     Socks4ConnectHandler socks4ConnectHandler;
+    Socks5ConnectHandler socks5ConnectHandler;
 
     public PortUnificationServerHandler(CarawayServer caraway) {
         this.caraway = caraway;
         this.httpServerHandler = new HttpServerHandler(caraway);
-        this.socksServerHandler = new SocksServerHandler(caraway);
+        this.socks5ConnectHandler = new Socks5ConnectHandler(caraway);
 
         this.socks4ConnectHandler = new Socks4ConnectHandler(caraway);
     }
@@ -56,7 +56,7 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
                 logKnownVersion(ctx, version);
                 pipeline.addLast(new Socks5InitialRequestDecoder());
                 pipeline.addLast(Socks5ServerEncoder.DEFAULT);
-                pipeline.addLast(socksServerHandler);
+                pipeline.addLast(socks5ConnectHandler);
             } else {
                 pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(httpServerHandler);
