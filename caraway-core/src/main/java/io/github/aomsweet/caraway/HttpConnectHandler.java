@@ -75,7 +75,7 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
         } else {
             ReferenceCountUtil.release(msg);
             ctx.close();
-            clearQueue(null);
+            flush();
         }
     }
 
@@ -96,18 +96,14 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
                 serverPipeline.addLast(getClientSslContext().newHandler(serverChannel.alloc()));
             }
             serverPipeline.addLast(new HttpRequestEncoder());
-            serverChannel.writeAndFlush(request).addListener(future -> {
-                if (future.isSuccess()) {
-                    connected = true;
-                    relayDucking(clientChannel, serverChannel);
-                    clearQueue(ctx);
-                    clientChannel.config().setAutoRead(true);
-                } else {
-                    release(clientChannel, serverChannel);
-                    logger.error("{} Failed to request server: {}",
-                        serverChannel, serverAddress, future.cause());
-                }
-            });
+            if (relayDucking(clientChannel, serverChannel)) {
+                connected = true;
+                ctx.fireChannelRead(request);
+                flush(ctx);
+                clientChannel.config().setAutoRead(true);
+            } else {
+                release(clientChannel, serverChannel);
+            }
         } catch (SSLException e) {
             release(clientChannel, serverChannel);
         }
@@ -116,7 +112,7 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
     @Override
     void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         ChannelUtils.closeOnFlush(clientChannel);
-        clearQueue(null);
+        flush();
     }
 
     @Override
@@ -126,17 +122,21 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
 
     @Override
     public void release(Channel clientChannel, Channel serverChannel) {
-        clearQueue(null);
+        flush();
         super.release(clientChannel, serverChannel);
     }
 
-    public void clearQueue(ChannelHandlerContext ctx) {
-        Object httpContent;
-        while ((httpContent = queue.poll()) != null) {
+    public void flush() {
+        flush(null);
+    }
+
+    public void flush(ChannelHandlerContext ctx) {
+        Object message;
+        while ((message = queue.poll()) != null) {
             if (ctx == null) {
-                ReferenceCountUtil.release(httpContent);
+                ReferenceCountUtil.release(message);
             } else {
-                ctx.fireChannelRead(httpContent);
+                ctx.fireChannelRead(message);
             }
         }
     }

@@ -18,6 +18,9 @@ public class HttpTunnelDuplexConnectHandler extends HttpTunnelConnectHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelDuplexConnectHandler.class);
 
+    /**
+     * tls client hello request
+     */
     Object clientHello;
 
     public HttpTunnelDuplexConnectHandler(CarawayServer caraway) {
@@ -44,18 +47,11 @@ public class HttpTunnelDuplexConnectHandler extends HttpTunnelConnectHandler {
 
     @Override
     void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
-        ChannelPipeline clientPipeline = clientChannel.pipeline();
-        clientPipeline.remove(this);
-        if (clientHello != null) {
-            serverChannel.writeAndFlush(clientHello).addListener(future -> {
-                if (future.isSuccess()) {
-                    relayDucking(clientChannel, serverChannel);
-                } else {
-                    release(clientChannel, serverChannel);
-                }
-            });
-        } else {
-            relayDucking(clientChannel, serverChannel);
+        ChannelPipeline clientPipeline = clientChannel.pipeline().remove(this);
+        if (relayDucking(clientChannel, serverChannel)) {
+            if (clientHello != null) {
+                clientPipeline.fireChannelRead(clientHello);
+            }
         }
     }
 

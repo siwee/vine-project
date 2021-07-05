@@ -56,7 +56,7 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
 
     abstract InetSocketAddress getServerAddress(Q request);
 
-    public void relayDucking(Channel clientChannel, Channel serverChannel) {
+    public boolean relayDucking(Channel clientChannel, Channel serverChannel) {
         if (clientChannel.isActive()) {
             if (serverChannel.isActive()) {
                 clientChannel.pipeline().addLast(new ClientRelayHandler(serverChannel));
@@ -64,12 +64,14 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
 
                 System.err.println("clientChannel channel: " + clientChannel.pipeline());
                 System.err.println("serverChannel channel: " + serverChannel.pipeline());
+                return true;
             } else {
                 ChannelUtils.closeOnFlush(clientChannel);
             }
         } else {
             ChannelUtils.closeOnFlush(serverChannel);
         }
+        return false;
     }
 
     public void release(Channel clientChannel, Channel serverChannel) {

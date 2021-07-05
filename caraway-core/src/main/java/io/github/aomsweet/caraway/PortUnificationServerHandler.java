@@ -60,6 +60,7 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
             } else {
                 pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(httpServerHandler);
+                // pipeline.addLast(new HttpTunnelDuplexConnectHandler(caraway));
             }
             pipeline.fireChannelRead(msg);
         } else {
