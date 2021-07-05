@@ -29,6 +29,10 @@ public class HttpTunnelConnectHandler extends ConnectHandler<HttpRequest> {
         super(caraway, logger);
     }
 
+    public HttpTunnelConnectHandler(CarawayServer caraway, InternalLogger logger) {
+        super(caraway, logger);
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
