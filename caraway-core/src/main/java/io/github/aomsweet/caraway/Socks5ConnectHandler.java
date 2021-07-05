@@ -56,8 +56,11 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
                     if (socks5CmdRequest.type() == Socks5CommandType.CONNECT) {
                         doConnectServer(ctx, ctx.channel(), (Socks5CommandRequest) msg);
                     } else {
+                        logger.error("Unsupported Socks5 {} command.", socks5CmdRequest.type());
                         ctx.close();
                     }
+                } else {
+                    ctx.close();
                 }
             } else {
                 ctx.close();
