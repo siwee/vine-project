@@ -97,9 +97,9 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
             }
             serverPipeline.addLast(new HttpRequestEncoder());
             if (relayDucking(clientChannel, serverChannel)) {
-                connected = true;
                 ctx.fireChannelRead(request);
                 flush(ctx);
+                connected = true;
                 clientChannel.config().setAutoRead(true);
             } else {
                 release(clientChannel, serverChannel);
