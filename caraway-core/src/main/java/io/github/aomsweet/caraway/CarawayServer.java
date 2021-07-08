@@ -22,6 +22,7 @@ public class CarawayServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
+    MitmManager mitmManager;
     ServerConnector connector;
     ProxyAuthenticator proxyAuthenticator;
     SocketAddress actualBoundAddress;
@@ -159,6 +160,11 @@ public class CarawayServer implements Closeable {
         return completableFuture;
     }
 
+    public CarawayServer withMitmManager(MitmManager mitmManager) {
+        this.mitmManager = mitmManager;
+        return this;
+    }
+
     public CarawayServer withServerConnector(ServerConnector connector) {
         this.connector = connector;
         return this;
@@ -202,6 +208,10 @@ public class CarawayServer implements Closeable {
     public CarawayServer withWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
         this.workerEventLoopGroup = workerEventLoopGroup;
         return this;
+    }
+
+    public MitmManager getMitmManager() {
+        return mitmManager;
     }
 
     public ServerConnector getConnector() {
