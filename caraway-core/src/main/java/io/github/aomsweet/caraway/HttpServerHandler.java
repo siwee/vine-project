@@ -5,8 +5,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 
@@ -29,15 +27,11 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> 
         if (httpRequest.decoderResult().isFailure()) {
             ctx.close();
         } else {
-            ProxyAuthenticator proxyAuthenticator = caraway.getProxyAuthenticator();
-            if (proxyAuthenticator != null) {
-                HttpHeaders headers = httpRequest.headers();
-                String authorization = headers.get(HttpHeaderNames.PROXY_AUTHORIZATION);
-                if (!proxyAuthenticator.authenticate(authorization)) {
-                    ByteBuf byteBuf = ctx.alloc().buffer(UNAUTHORIZED_BYTES.length);
-                    ctx.writeAndFlush(byteBuf.writeBytes(UNAUTHORIZED_BYTES)).addListener(ChannelFutureListener.CLOSE);
-                    return;
-                }
+            ProxyAuthenticator authenticator = caraway.getProxyAuthenticator();
+            if (!(authenticator == null || authenticator.authenticate(httpRequest))) {
+                ByteBuf byteBuf = ctx.alloc().buffer(UNAUTHORIZED_BYTES.length);
+                ctx.writeAndFlush(byteBuf.writeBytes(UNAUTHORIZED_BYTES)).addListener(ChannelFutureListener.CLOSE);
+                return;
             }
 
             if (HttpMethod.CONNECT.equals(httpRequest.method())) {

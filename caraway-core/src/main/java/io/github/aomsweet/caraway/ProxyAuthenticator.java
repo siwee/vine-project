@@ -1,5 +1,8 @@
 package io.github.aomsweet.caraway;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequest;
 
 import java.util.Base64;
@@ -28,6 +31,12 @@ public interface ProxyAuthenticator {
 
     default boolean authenticate(Socks5PasswordAuthRequest authRequest) {
         return authenticate(authRequest.username(), authRequest.password());
+    }
+
+    default boolean authenticate(HttpRequest httpRequest) {
+        HttpHeaders headers = httpRequest.headers();
+        String authorization = headers.get(HttpHeaderNames.PROXY_AUTHORIZATION);
+        return authenticate(authorization);
     }
 
     boolean authenticate(String username, String password);

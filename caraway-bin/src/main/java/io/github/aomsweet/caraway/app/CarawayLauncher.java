@@ -35,6 +35,7 @@ public class CarawayLauncher {
         RuntimeMXBean mx = ManagementFactory.getRuntimeMXBean();
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer()
+            .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
