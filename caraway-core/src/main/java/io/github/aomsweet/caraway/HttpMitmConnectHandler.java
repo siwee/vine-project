@@ -23,9 +23,9 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
+public class HttpMitmConnectHandler extends ConnectHandler<HttpRequest> {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmConnectHandler.class);
 
     public static SslContext clientSslContext;
 
@@ -37,7 +37,7 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
     Channel clientChannel;
     Channel serverChannel;
 
-    public HttpConnectHandler(CarawayServer caraway) {
+    public HttpMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
         this.queue = new ArrayDeque<>(4);
     }
@@ -175,7 +175,7 @@ public class HttpConnectHandler extends ConnectHandler<HttpRequest> {
 
     public static SslContext getClientSslContext() throws SSLException {
         if (clientSslContext == null) {
-            synchronized (HttpConnectHandler.class) {
+            synchronized (HttpMitmConnectHandler.class) {
                 if (clientSslContext == null) {
                     //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
                     clientSslContext = SslContextBuilder.forClient()

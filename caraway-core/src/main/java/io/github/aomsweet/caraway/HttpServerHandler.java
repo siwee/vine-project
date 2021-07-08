@@ -41,7 +41,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> 
                     ctx.pipeline().addLast(new HttpsMitmConnectHandler(caraway));
                 }
             } else {
-                ctx.pipeline().addLast(new HttpConnectHandler(caraway));
+                ctx.pipeline().addLast(new HttpMitmConnectHandler(caraway));
             }
             ctx.fireChannelRead(httpRequest).pipeline().remove(this);
         }

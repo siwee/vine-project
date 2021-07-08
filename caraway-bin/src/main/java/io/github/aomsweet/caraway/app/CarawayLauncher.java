@@ -6,6 +6,7 @@ import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.MitmManager;
 import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
 import org.slf4j.Logger;
@@ -36,6 +37,8 @@ public class CarawayLauncher {
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer()
             .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
+            .withMitmManager(new MitmManager() {
+            })
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
