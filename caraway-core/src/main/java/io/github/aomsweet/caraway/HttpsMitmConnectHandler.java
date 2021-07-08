@@ -30,9 +30,9 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public class HttpMitmConnectHandler extends HttpTunnelConnectHandler {
+public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmConnectHandler.class);
 
     public static SslContext clientSslContext;
     public static SslContext serverSslContext;
@@ -43,7 +43,7 @@ public class HttpMitmConnectHandler extends HttpTunnelConnectHandler {
     Channel serverChannel;
     final Queue<Object> queue;
 
-    public HttpMitmConnectHandler(CarawayServer caraway) {
+    public HttpsMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
         this.queue = new ArrayDeque<>(2);
     }
@@ -149,7 +149,7 @@ public class HttpMitmConnectHandler extends HttpTunnelConnectHandler {
 
     public static SslContext getClientSslContext() throws SSLException {
         if (clientSslContext == null) {
-            synchronized (HttpMitmConnectHandler.class) {
+            synchronized (HttpsMitmConnectHandler.class) {
                 if (clientSslContext == null) {
                     //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
                     clientSslContext = SslContextBuilder.forClient()
@@ -163,9 +163,9 @@ public class HttpMitmConnectHandler extends HttpTunnelConnectHandler {
 
     public static SslContext getServerSslContext() throws Exception {
         if (serverSslContext == null) {
-            synchronized (HttpMitmConnectHandler.class) {
+            synchronized (HttpsMitmConnectHandler.class) {
                 if (serverSslContext == null) {
-                    ClassLoader cl = HttpMitmConnectHandler.class.getClassLoader();
+                    ClassLoader cl = HttpsMitmConnectHandler.class.getClassLoader();
                     try (InputStream caInputStream = cl.getResourceAsStream("caraway/cert/ca.crt");
                          InputStream privateInputStream = cl.getResourceAsStream("caraway/cert/ca_private.key")) {
                         CertificateFactory cf = CertificateFactory.getInstance("X.509");
