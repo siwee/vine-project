@@ -6,9 +6,13 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.SSLException;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -23,6 +27,7 @@ public class CarawayServer implements Closeable {
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
     MitmManager mitmManager;
+    SslContext clientSslContext;
     ServerConnector connector;
     ProxyAuthenticator proxyAuthenticator;
     SocketAddress actualBoundAddress;
@@ -165,6 +170,11 @@ public class CarawayServer implements Closeable {
         return this;
     }
 
+    public CarawayServer withClientSslContext(SslContext clientSslContext) {
+        this.clientSslContext = clientSslContext;
+        return this;
+    }
+
     public CarawayServer withServerConnector(ServerConnector connector) {
         this.connector = connector;
         return this;
@@ -212,6 +222,20 @@ public class CarawayServer implements Closeable {
 
     public MitmManager getMitmManager() {
         return mitmManager;
+    }
+
+    public SslContext getClientSslContext() throws SSLException {
+        if (clientSslContext == null) {
+            synchronized (this) {
+                if (clientSslContext == null) {
+                    //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
+                    clientSslContext = SslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .build();
+                }
+            }
+        }
+        return clientSslContext;
     }
 
     public ServerConnector getConnector() {

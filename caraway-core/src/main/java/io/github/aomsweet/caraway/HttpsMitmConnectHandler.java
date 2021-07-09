@@ -11,7 +11,6 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -34,7 +33,6 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmConnectHandler.class);
 
-    public static SslContext clientSslContext;
     public static SslContext serverSslContext;
 
     boolean connected;
@@ -100,7 +98,8 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
 
         try {
             ChannelPipeline pipeline = serverChannel.pipeline();
-            pipeline.addLast(getClientSslContext().newHandler(serverChannel.alloc()));
+            SslContext clientSslContext = caraway.getClientSslContext();
+            pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc()));
             pipeline.addLast(new HttpRequestEncoder());
             tryDucking(ctx);
         } catch (SSLException e) {
@@ -145,20 +144,6 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
                 ctx.pipeline().fireChannelRead(message);
             }
         }
-    }
-
-    public static SslContext getClientSslContext() throws SSLException {
-        if (clientSslContext == null) {
-            synchronized (HttpsMitmConnectHandler.class) {
-                if (clientSslContext == null) {
-                    //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
-                    clientSslContext = SslContextBuilder.forClient()
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .build();
-                }
-            }
-        }
-        return clientSslContext;
     }
 
     public static SslContext getServerSslContext() throws Exception {

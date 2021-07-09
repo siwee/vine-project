@@ -8,8 +8,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
@@ -26,8 +24,6 @@ import java.util.Queue;
 public class HttpMitmConnectHandler extends ConnectHandler<HttpRequest> {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmConnectHandler.class);
-
-    public static SslContext clientSslContext;
 
     boolean isSsl;
     boolean connected;
@@ -93,7 +89,8 @@ public class HttpMitmConnectHandler extends ConnectHandler<HttpRequest> {
         try {
             ChannelPipeline serverPipeline = serverChannel.pipeline();
             if (isSsl) {
-                serverPipeline.addLast(getClientSslContext().newHandler(serverChannel.alloc()));
+                SslContext clientSslContext = caraway.getClientSslContext();
+                serverPipeline.addLast(clientSslContext.newHandler(serverChannel.alloc()));
             }
             serverPipeline.addLast(new HttpRequestEncoder());
             if (relayDucking(clientChannel, serverChannel)) {
@@ -171,19 +168,5 @@ public class HttpMitmConnectHandler extends ConnectHandler<HttpRequest> {
             return InetSocketAddress.createUnresolved(host.substring(0, index),
                 Integer.parseInt(host.substring(index + 1)));
         }
-    }
-
-    public static SslContext getClientSslContext() throws SSLException {
-        if (clientSslContext == null) {
-            synchronized (HttpMitmConnectHandler.class) {
-                if (clientSslContext == null) {
-                    //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
-                    clientSslContext = SslContextBuilder.forClient()
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .build();
-                }
-            }
-        }
-        return clientSslContext;
     }
 }
