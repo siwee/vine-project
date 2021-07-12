@@ -1,5 +1,9 @@
-package io.github.aomsweet.caraway;
+package io.github.aomsweet.caraway.http.mitm;
 
+import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ChannelUtils;
+import io.github.aomsweet.caraway.ResolveServerAddressException;
+import io.github.aomsweet.caraway.http.HttpTunnelConnectHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,6 +21,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.cert.CertificateFactory;
@@ -24,12 +29,11 @@ import java.security.cert.X509Certificate;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayDeque;
-import java.util.Queue;
 
 /**
  * @author aomsweet
  */
-public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
+public class HttpsMitmConnectHandler extends MitmConnectHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmConnectHandler.class);
 
@@ -37,9 +41,6 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
 
     boolean connected;
     boolean sslHandshakeCompleted;
-    Channel clientChannel;
-    Channel serverChannel;
-    final Queue<Object> queue;
 
     public HttpsMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
@@ -47,33 +48,27 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HttpRequest) {
-            HttpRequest request = (HttpRequest) msg;
-            if (logger.isDebugEnabled()) {
-                logger.debug(ctx.channel() + " Accept request: {}", request);
-            }
-            if (HttpMethod.CONNECT.equals(request.method())) {
-                byte[] bytes = HttpTunnelConnectHandler.ESTABLISHED_BYTES;
-                ByteBuf byteBuf = ctx.alloc().buffer(bytes.length);
-                ctx.writeAndFlush(byteBuf.writeBytes(bytes));
-                ctx.pipeline().addFirst(getServerSslContext().newHandler(ctx.alloc()));
-                doConnectServer(ctx, ctx.channel(), request);
-            } else {
-                queue.offer(msg);
-            }
-        } else if (msg instanceof HttpContent) {
-            if (sslHandshakeCompleted) {
-                queue.offer(msg);
-            } else {
-                ReferenceCountUtil.release(msg);
-            }
+    public void handleHttpRequest0(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+        if (HttpMethod.CONNECT.equals(request.method())) {
+            byte[] bytes = HttpTunnelConnectHandler.TUNNEL_ESTABLISHED_RESPONSE;
+            ByteBuf byteBuf = ctx.alloc().buffer(bytes.length);
+            ctx.writeAndFlush(byteBuf.writeBytes(bytes));
+            ctx.pipeline().addFirst(getServerSslContext().newHandler(ctx.alloc()));
+            doConnectServer(ctx, ctx.channel(), request);
         } else {
-            ReferenceCountUtil.release(msg);
-            ctx.close();
-            flush();
+            queue.offer(request);
         }
     }
+
+    @Override
+    public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
+        if (sslHandshakeCompleted) {
+            queue.offer(httpContent);
+        } else {
+            ReferenceCountUtil.release(httpContent);
+        }
+    }
+
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -91,7 +86,7 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
     }
 
     @Override
-    void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
+    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
         connected = true;
         this.clientChannel = clientChannel;
         this.serverChannel = serverChannel;
@@ -120,21 +115,6 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
     }
 
     @Override
-    void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        ChannelUtils.closeOnFlush(clientChannel);
-        flush();
-    }
-
-    @Override
-    public void release(Channel clientChannel, Channel serverChannel) {
-        flush();
-        super.release(clientChannel, serverChannel);
-    }
-
-    public void flush() {
-        flush(null);
-    }
-
     public void flush(ChannelHandlerContext ctx) {
         Object message;
         while ((message = queue.poll()) != null) {
@@ -144,6 +124,11 @@ public class HttpsMitmConnectHandler extends HttpTunnelConnectHandler {
                 ctx.pipeline().fireChannelRead(message);
             }
         }
+    }
+
+    @Override
+    protected InetSocketAddress getServerAddress(HttpRequest request) throws ResolveServerAddressException {
+        return resolveServerAddress(request);
     }
 
     public static SslContext getServerSslContext() throws Exception {

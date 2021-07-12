@@ -1,5 +1,9 @@
-package io.github.aomsweet.caraway;
+package io.github.aomsweet.caraway.http;
 
+import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ProxyAuthenticator;
+import io.github.aomsweet.caraway.http.mitm.HttpMitmConnectHandler;
+import io.github.aomsweet.caraway.http.mitm.HttpsMitmConnectHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -36,7 +40,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> 
 
             if (HttpMethod.CONNECT.equals(httpRequest.method())) {
                 if (caraway.getMitmManager() == null) {
-                    ctx.pipeline().addLast(new HttpTunnelConnectHandler(caraway));
+                    ctx.pipeline().addLast(new HttpTunnelDuplexConnectHandler(caraway));
                 } else {
                     ctx.pipeline().addLast(new HttpsMitmConnectHandler(caraway));
                 }

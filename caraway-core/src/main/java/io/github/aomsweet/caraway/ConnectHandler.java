@@ -16,17 +16,15 @@ import java.net.InetSocketAddress;
  */
 public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
 
-    final InternalLogger logger;
-    final CarawayServer caraway;
-    ServerConnector connector;
+    protected final InternalLogger logger;
+    protected final CarawayServer caraway;
 
     public ConnectHandler(CarawayServer caraway, InternalLogger logger) {
         this.logger = logger;
         this.caraway = caraway;
-        this.connector = caraway.getConnector();
     }
 
-    Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) {
+    protected Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) {
         EventLoop eventLoop = clientChannel.eventLoop();
         Promise<Channel> promise = eventLoop.newPromise();
         promise.addListener((FutureListener<Channel>) future -> {
@@ -41,20 +39,25 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
                 this.failConnect(ctx, clientChannel, request);
             }
         });
-        InetSocketAddress serverAddress = getServerAddress(request);
-        connector.channel(serverAddress, eventLoop, promise).addListener(future -> {
-            if (!future.isSuccess()) {
-                this.failConnect(ctx, clientChannel, request);
-            }
-        });
+        try {
+            InetSocketAddress serverAddress = getServerAddress(request);
+            ServerConnector connector = caraway.getConnector();
+            connector.channel(serverAddress, eventLoop, promise).addListener(future -> {
+                if (!future.isSuccess()) {
+                    this.failConnect(ctx, clientChannel, request);
+                }
+            });
+        } catch (ResolveServerAddressException e) {
+            promise.tryFailure(e);
+        }
         return promise;
     }
 
-    abstract void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Q request);
+    protected abstract void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Q request);
 
-    abstract void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Q request);
+    protected abstract void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Q request);
 
-    abstract InetSocketAddress getServerAddress(Q request);
+    protected abstract InetSocketAddress getServerAddress(Q request) throws ResolveServerAddressException;
 
     public boolean relayDucking(Channel clientChannel, Channel serverChannel) {
         if (clientChannel.isActive()) {

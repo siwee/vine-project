@@ -1,5 +1,8 @@
-package io.github.aomsweet.caraway;
+package io.github.aomsweet.caraway.socks;
 
+import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ChannelUtils;
+import io.github.aomsweet.caraway.ConnectHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,7 +37,7 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
                     ctx.close();
                 }
             } else {
-                logger.error("Bad socks4 request. {}", ctx.channel());
+                logger.error("Bad socks4 request: {}. Channel: {}", msg, ctx.channel());
                 ctx.close();
             }
         } else {
@@ -44,7 +47,7 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     }
 
     @Override
-    void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks4CommandRequest request) {
+    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks4CommandRequest request) {
         clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
             if (future.isSuccess()) {
                 clientChannel.pipeline().remove(Socks4ServerDecoder.class);
@@ -58,12 +61,12 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     }
 
     @Override
-    void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
+    protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
         ChannelUtils.closeOnFlush(clientChannel, REJECTED_OR_FAILED_RESPONSE);
     }
 
     @Override
-    InetSocketAddress getServerAddress(Socks4CommandRequest request) {
+    protected InetSocketAddress getServerAddress(Socks4CommandRequest request) {
         return InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
     }
 }

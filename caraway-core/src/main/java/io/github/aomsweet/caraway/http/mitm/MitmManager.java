@@ -1,4 +1,4 @@
-package io.github.aomsweet.caraway;
+package io.github.aomsweet.caraway.http.mitm;
 
 /**
  * @author aomsweet

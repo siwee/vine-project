@@ -1,5 +1,9 @@
-package io.github.aomsweet.caraway;
+package io.github.aomsweet.caraway.socks;
 
+import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ChannelUtils;
+import io.github.aomsweet.caraway.ConnectHandler;
+import io.github.aomsweet.caraway.ProxyAuthenticator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -63,6 +67,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
                     ctx.close();
                 }
             } else {
+                logger.error("Bad socks5 request: {}. Channel: {}", msg, ctx.channel());
                 ctx.close();
             }
         } else {
@@ -72,7 +77,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     }
 
     @Override
-    void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks5CommandRequest request) {
+    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
             request.dstAddrType(), request.dstAddr(), request.dstPort());
         clientChannel.writeAndFlush(response).addListener(future -> {
@@ -87,13 +92,13 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     }
 
     @Override
-    void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
+    protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, request.dstAddrType());
         ChannelUtils.closeOnFlush(clientChannel, response);
     }
 
     @Override
-    InetSocketAddress getServerAddress(Socks5CommandRequest request) {
+    protected InetSocketAddress getServerAddress(Socks5CommandRequest request) {
         return InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
     }
 }

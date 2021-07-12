@@ -1,5 +1,6 @@
 package io.github.aomsweet.caraway;
 
+import io.github.aomsweet.caraway.http.mitm.MitmManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;

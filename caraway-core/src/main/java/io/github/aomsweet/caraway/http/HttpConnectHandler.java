@@ -1,5 +1,8 @@
-package io.github.aomsweet.caraway;
+package io.github.aomsweet.caraway.http;
 
+import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ConnectHandler;
+import io.github.aomsweet.caraway.ResolveServerAddressException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
@@ -11,6 +14,8 @@ import java.net.InetSocketAddress;
  * @author aomsweet
  */
 public abstract class HttpConnectHandler extends ConnectHandler<HttpRequest> {
+
+    public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
     public HttpConnectHandler(CarawayServer caraway, InternalLogger logger) {
         super(caraway, logger);
@@ -45,13 +50,13 @@ public abstract class HttpConnectHandler extends ConnectHandler<HttpRequest> {
         ctx.fireChannelRead(message);
     }
 
-    public InetSocketAddress resolveTunnelServerAddress(HttpRequest tunnelRequest) throws ResolveServerAddressException {
+    public InetSocketAddress resolveServerAddress(HttpRequest httpRequest) throws ResolveServerAddressException {
         try {
-            String uri = tunnelRequest.uri();
+            String uri = httpRequest.uri();
             int index = uri.indexOf(':');
             return InetSocketAddress.createUnresolved(uri.substring(0, index), Integer.parseInt(uri.substring(index + 1)));
         } catch (Exception e) {
-            throw new ResolveServerAddressException(getHttpRequestInitialLine(tunnelRequest), e);
+            throw new ResolveServerAddressException(getHttpRequestInitialLine(httpRequest), e);
         }
     }
 
