@@ -1,6 +1,7 @@
 package io.github.aomsweet.caraway.http.mitm;
 
 import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ResolveServerAddressException;
 import io.github.aomsweet.caraway.http.HttpConnectHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -8,6 +9,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -19,6 +21,7 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     Channel clientChannel;
     Channel serverChannel;
 
+    InetSocketAddress serverAddress;
     Queue<Object> queue;
 
     public MitmConnectHandler(CarawayServer caraway, InternalLogger logger) {
@@ -69,6 +72,11 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     public void release(Channel clientChannel, Channel serverChannel) {
         flush(null);
         super.release(clientChannel, serverChannel);
+    }
+
+    @Override
+    protected InetSocketAddress getServerAddress(HttpRequest request) throws ResolveServerAddressException {
+        return serverAddress;
     }
 
     @Override

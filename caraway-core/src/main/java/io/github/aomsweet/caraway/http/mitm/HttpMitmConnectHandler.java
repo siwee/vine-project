@@ -30,8 +30,6 @@ public class HttpMitmConnectHandler extends MitmConnectHandler {
     boolean isSsl;
     boolean connected;
 
-    InetSocketAddress serverAddress;
-
     public HttpMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
         this.queue = new ArrayDeque<>(4);
@@ -92,11 +90,6 @@ public class HttpMitmConnectHandler extends MitmConnectHandler {
         } catch (SSLException e) {
             release(clientChannel, serverChannel);
         }
-    }
-
-    @Override
-    protected InetSocketAddress getServerAddress(HttpRequest request) {
-        return serverAddress;
     }
 
     @Override

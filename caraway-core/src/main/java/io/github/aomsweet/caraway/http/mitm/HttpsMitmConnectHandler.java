@@ -2,7 +2,6 @@ package io.github.aomsweet.caraway.http.mitm;
 
 import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.ChannelUtils;
-import io.github.aomsweet.caraway.ResolveServerAddressException;
 import io.github.aomsweet.caraway.http.HttpTunnelConnectHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -13,21 +12,12 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.net.ssl.SSLException;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayDeque;
 
 /**
@@ -36,8 +26,6 @@ import java.util.ArrayDeque;
 public class HttpsMitmConnectHandler extends MitmConnectHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmConnectHandler.class);
-
-    public static SslContext serverSslContext;
 
     boolean connected;
     boolean sslHandshakeCompleted;
@@ -50,10 +38,16 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
     @Override
     public void handleHttpRequest0(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
         if (HttpMethod.CONNECT.equals(request.method())) {
+            this.serverAddress = resolveServerAddress(request);
             byte[] bytes = HttpTunnelConnectHandler.TUNNEL_ESTABLISHED_RESPONSE;
             ByteBuf byteBuf = ctx.alloc().buffer(bytes.length);
             ctx.writeAndFlush(byteBuf.writeBytes(bytes));
-            ctx.pipeline().addFirst(getServerSslContext().newHandler(ctx.alloc()));
+
+            String host = serverAddress.getHostName();
+            MitmManager mitmManager = caraway.getMitmManager();
+            SslContext sslContext = mitmManager.serverSslContext(host);
+            ctx.pipeline().addFirst(sslContext.newHandler(ctx.alloc()));
+
             doConnectServer(ctx, ctx.channel(), request);
         } else {
             queue.offer(request);
@@ -124,33 +118,5 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
                 ctx.pipeline().fireChannelRead(message);
             }
         }
-    }
-
-    @Override
-    protected InetSocketAddress getServerAddress(HttpRequest request) throws ResolveServerAddressException {
-        return resolveServerAddress(request);
-    }
-
-    public static SslContext getServerSslContext() throws Exception {
-        if (serverSslContext == null) {
-            synchronized (HttpsMitmConnectHandler.class) {
-                if (serverSslContext == null) {
-                    ClassLoader cl = HttpsMitmConnectHandler.class.getClassLoader();
-                    try (InputStream caInputStream = cl.getResourceAsStream("caraway/cert/ca.crt");
-                         InputStream privateInputStream = cl.getResourceAsStream("caraway/cert/ca_private.key")) {
-                        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-                        X509Certificate cert = (X509Certificate) cf.generateCertificate(caInputStream);
-
-                        byte[] bytes = privateInputStream.readAllBytes();
-                        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-                        EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(bytes);
-                        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
-
-                        serverSslContext = SslContextBuilder.forServer(privateKey, cert).build();
-                    }
-                }
-            }
-        }
-        return serverSslContext;
     }
 }

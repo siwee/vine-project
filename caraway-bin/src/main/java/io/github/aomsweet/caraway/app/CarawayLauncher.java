@@ -6,9 +6,9 @@ import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.caraway.CarawayServer;
-import io.github.aomsweet.caraway.MitmManager;
 import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
+import io.github.aomsweet.caraway.http.mitm.SelfSignedMitmManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -24,7 +24,7 @@ public class CarawayLauncher {
     private static final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
     private static final Logger logger = LoggerFactory.getLogger(CarawayLauncher.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         /*
          Register a signal handler for Ctrl-C that runs the shutdown hooks
          https://github.com/oracle/graal/issues/465
@@ -37,8 +37,7 @@ public class CarawayLauncher {
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer()
             .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
-            .withMitmManager(new MitmManager() {
-            })
+            .withMitmManager(new SelfSignedMitmManager())
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
