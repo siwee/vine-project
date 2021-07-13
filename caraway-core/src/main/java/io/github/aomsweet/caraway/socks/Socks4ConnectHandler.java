@@ -29,15 +29,10 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof Socks4CommandRequest) {
             Socks4CommandRequest request = (Socks4CommandRequest) msg;
-            if (request.decoderResult().isSuccess()) {
-                if (request.type() == Socks4CommandType.CONNECT) {
-                    doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
-                } else {
-                    logger.error("Unsupported Socks4 {} command.", request.type());
-                    ctx.close();
-                }
+            if (request.type() == Socks4CommandType.CONNECT) {
+                doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
             } else {
-                logger.error("Bad socks4 request: {}. Channel: {}", msg, ctx.channel());
+                logger.error("Unsupported Socks4 {} command.", request.type());
                 ctx.close();
             }
         } else {
