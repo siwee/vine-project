@@ -8,6 +8,7 @@ import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
+import io.github.aomsweet.caraway.http.mitm.BouncyCastleSelfSignedMitmManager;
 import io.github.aomsweet.caraway.http.mitm.SelfSignedMitmManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ public class CarawayLauncher {
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer()
             .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
-            .withMitmManager(new SelfSignedMitmManager())
+            .withMitmManager(new BouncyCastleSelfSignedMitmManager())
             .withPort(2228);
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {

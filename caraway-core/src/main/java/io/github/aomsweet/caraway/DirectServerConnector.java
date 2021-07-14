@@ -5,6 +5,7 @@ import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
@@ -31,6 +32,7 @@ public class DirectServerConnector implements ServerConnector {
                     if (logger.isTraceEnabled()) {
                         ch.pipeline().addLast(new LoggingHandler(LogLevel.TRACE));
                     }
+                    ch.pipeline().addLast(new HttpProxyHandler(InetSocketAddress.createUnresolved("localhost", 9999)));
                 }
             });
     }

@@ -36,7 +36,11 @@
         <dependency>
             <groupId>io.github.aomsweet</groupId>
             <artifactId>caraway-core</artifactId>
-            <version>${parent.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.aomsweet</groupId>
+            <artifactId>caraway-bouncycastle</artifactId>
         </dependency>
 
         <dependency>

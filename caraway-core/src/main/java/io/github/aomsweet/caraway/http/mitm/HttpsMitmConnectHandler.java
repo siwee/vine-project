@@ -80,6 +80,11 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
     }
 
     @Override
+    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) {
+        queue.offer(message);
+    }
+
+    @Override
     protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
         connected = true;
         this.clientChannel = clientChannel;

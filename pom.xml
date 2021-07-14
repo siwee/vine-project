@@ -11,7 +11,7 @@
     <modules>
         <module>caraway-bin</module>
         <module>caraway-core</module>
-        <module>caraway-mitm</module>
+        <module>caraway-bouncycastle</module>
     </modules>
 
     <name>caraway-parent</name>
@@ -24,6 +24,7 @@
         <maven.compiler.target>11</maven.compiler.target>
 
         <netty.version>4.1.65.Final</netty.version>
+        <bouncycastle.version>1.69</bouncycastle.version>
         <logback.version>1.2.3</logback.version>
         <jansi.version>2.3.3</jansi.version>
         <lombok.version>1.18.20</lombok.version>
@@ -32,6 +33,18 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.github.aomsweet</groupId>
+                <artifactId>caraway-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.aomsweet</groupId>
+                <artifactId>caraway-bouncycastle</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- https://mvnrepository.com/artifact/io.netty/netty-bom -->
             <dependency>
                 <groupId>io.netty</groupId>
@@ -53,6 +66,14 @@
                 <groupId>org.fusesource.jansi</groupId>
                 <artifactId>jansi</artifactId>
                 <version>${jansi.version}</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
+                <version>${bouncycastle.version}</version>
+                <optional>true</optional>
             </dependency>
         </dependencies>
     </dependencyManagement>

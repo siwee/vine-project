@@ -17,8 +17,8 @@ import java.security.spec.PKCS8EncodedKeySpec;
  */
 public class SelfSignedMitmManager implements MitmManager {
 
-    protected PrivateKey rootPrivateKey;
-    protected X509Certificate rootCertificate;
+    protected PrivateKey issuerPrivateKey;
+    protected X509Certificate issuerCertificate;
 
     private SslContext defaultServerSslContext;
 
@@ -34,22 +34,27 @@ public class SelfSignedMitmManager implements MitmManager {
 
 
     @Override
-    public SslContext serverSslContext(String... hosts) {
+    public SslContext serverSslContext(String host) throws Exception {
         return defaultServerSslContext;
     }
 
+    @Override
+    public X509Certificate getIssuerCertificate() {
+        return issuerCertificate;
+    }
+
     private void loadDefaultServerSslContext() throws SSLException {
-        this.defaultServerSslContext = SslContextBuilder.forServer(rootPrivateKey, rootCertificate).build();
+        this.defaultServerSslContext = SslContextBuilder.forServer(issuerPrivateKey, issuerCertificate).build();
     }
 
     private void loadRootCertificate(InputStream certInputStream, InputStream keyInputStream) throws Exception {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        this.rootCertificate = (X509Certificate) cf.generateCertificate(certInputStream);
+        this.issuerCertificate = (X509Certificate) cf.generateCertificate(certInputStream);
 
         byte[] bytes = keyInputStream.readAllBytes();
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(bytes);
-        this.rootPrivateKey = keyFactory.generatePrivate(privateKeySpec);
+        this.issuerPrivateKey = keyFactory.generatePrivate(privateKeySpec);
     }
 
     private void loadRootCertificate() throws Exception {
