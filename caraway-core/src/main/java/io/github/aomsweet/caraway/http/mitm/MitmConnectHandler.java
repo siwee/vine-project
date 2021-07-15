@@ -5,10 +5,15 @@ import io.github.aomsweet.caraway.ResolveServerAddressException;
 import io.github.aomsweet.caraway.http.HttpConnectHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 
+import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -17,6 +22,9 @@ import java.util.Queue;
  * @author aomsweet
  */
 public abstract class MitmConnectHandler extends HttpConnectHandler {
+
+    boolean isSsl;
+    boolean connected;
 
     Channel clientChannel;
     Channel serverChannel;
@@ -47,6 +55,32 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
         ctx.close();
         ReferenceCountUtil.release(message);
     }
+
+    @Override
+    protected Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
+        this.connected = false;
+        return super.doConnectServer(ctx, clientChannel, request);
+    }
+
+    @Override
+    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
+        this.connected = true;
+        this.serverChannel = serverChannel;
+        try {
+            ChannelPipeline pipeline = serverChannel.pipeline();
+            if (isSsl) {
+                SslContext clientSslContext = caraway.getClientSslContext();
+                pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc(),
+                    serverAddress.getHostName(), serverAddress.getPort()));
+            }
+            pipeline.addLast(new HttpRequestEncoder());
+            doRelayDucking(ctx, request);
+        } catch (SSLException e) {
+            release(clientChannel, serverChannel);
+        }
+    }
+
+    protected abstract void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request);
 
     @Override
     protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {

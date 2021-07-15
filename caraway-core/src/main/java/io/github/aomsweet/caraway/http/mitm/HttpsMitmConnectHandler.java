@@ -6,18 +6,15 @@ import io.github.aomsweet.caraway.http.HttpTunnelConnectHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLException;
 import java.util.ArrayDeque;
 
 /**
@@ -27,11 +24,11 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmConnectHandler.class);
 
-    boolean connected;
     boolean sslHandshakeCompleted;
 
     public HttpsMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
+        this.isSsl = true;
         this.queue = new ArrayDeque<>(2);
     }
 
@@ -85,22 +82,8 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
     }
 
     @Override
-    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
-        connected = true;
-        this.clientChannel = clientChannel;
-        this.serverChannel = serverChannel;
-
-        try {
-            ChannelPipeline pipeline = serverChannel.pipeline();
-            SslContext clientSslContext = caraway.getClientSslContext();
-            pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc(),
-                serverAddress.getHostName(), serverAddress.getPort()));
-            pipeline.addLast(new HttpRequestEncoder());
-            tryDucking(ctx);
-        } catch (SSLException e) {
-            logger.error(e.getMessage(), e);
-            release(clientChannel, serverChannel);
-        }
+    protected void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request) {
+        tryDucking(ctx);
     }
 
     void tryDucking(ChannelHandlerContext ctx) {

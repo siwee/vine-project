@@ -6,17 +6,12 @@ import io.github.aomsweet.caraway.RelayHandler;
 import io.github.aomsweet.caraway.ResolveServerAddressException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.ssl.SslContext;
-import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 
@@ -26,9 +21,6 @@ import java.util.ArrayDeque;
 public class HttpMitmConnectHandler extends MitmConnectHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmConnectHandler.class);
-
-    boolean isSsl;
-    boolean connected;
 
     public HttpMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
@@ -62,33 +54,11 @@ public class HttpMitmConnectHandler extends MitmConnectHandler {
     }
 
     @Override
-    protected Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        this.connected = false;
-        ctx.channel().config().setAutoRead(false);
-        return super.doConnectServer(ctx, ctx.channel(), request);
-    }
-
-    @Override
-    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
-        this.clientChannel = clientChannel;
-        this.serverChannel = serverChannel;
-        try {
-            ChannelPipeline serverPipeline = serverChannel.pipeline();
-            if (isSsl) {
-                SslContext clientSslContext = caraway.getClientSslContext();
-                serverPipeline.addLast(clientSslContext.newHandler(serverChannel.alloc(),
-                    serverAddress.getHostName(), serverAddress.getPort()));
-            }
-            serverPipeline.addLast(new HttpRequestEncoder());
-            if (relayDucking(clientChannel, serverChannel)) {
-                ctx.fireChannelRead(request);
-                flush(ctx);
-                connected = true;
-                clientChannel.config().setAutoRead(true);
-            } else {
-                release(clientChannel, serverChannel);
-            }
-        } catch (SSLException e) {
+    protected void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request) {
+        if (relayDucking(clientChannel, serverChannel)) {
+            ctx.fireChannelRead(request);
+            flush(ctx);
+        } else {
             release(clientChannel, serverChannel);
         }
     }
