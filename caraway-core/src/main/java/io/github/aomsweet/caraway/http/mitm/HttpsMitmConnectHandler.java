@@ -93,7 +93,8 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
         try {
             ChannelPipeline pipeline = serverChannel.pipeline();
             SslContext clientSslContext = caraway.getClientSslContext();
-            pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc()));
+            pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc(),
+                serverAddress.getHostName(), serverAddress.getPort()));
             pipeline.addLast(new HttpRequestEncoder());
             tryDucking(ctx);
         } catch (SSLException e) {
