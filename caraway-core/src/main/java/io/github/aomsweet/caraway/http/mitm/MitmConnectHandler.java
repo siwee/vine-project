@@ -34,7 +34,7 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
 
     public MitmConnectHandler(CarawayServer caraway, InternalLogger logger) {
         super(caraway, logger);
-        this.queue = new ArrayDeque<>(2);
+        this.queue = new ArrayDeque<>(4);
     }
 
     @Override
@@ -97,7 +97,11 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
             if (ctx == null) {
                 ReferenceCountUtil.release(message);
             } else {
-                ctx.fireChannelRead(message);
+                if (ctx.isRemoved()) {
+                    ctx.pipeline().fireChannelRead(message);
+                } else {
+                    ctx.fireChannelRead(message);
+                }
             }
         }
     }

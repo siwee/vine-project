@@ -4,7 +4,6 @@ import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.ChannelUtils;
 import io.github.aomsweet.caraway.RelayHandler;
 import io.github.aomsweet.caraway.ResolveServerAddressException;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -13,7 +12,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayDeque;
 
 /**
  * @author aomsweet
@@ -24,7 +22,6 @@ public class HttpMitmConnectHandler extends MitmConnectHandler {
 
     public HttpMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
-        this.queue = new ArrayDeque<>(4);
     }
 
     @Override
@@ -40,6 +37,7 @@ public class HttpMitmConnectHandler extends MitmConnectHandler {
             clientChannel.pipeline().remove(RelayHandler.class);
             serverChannel.pipeline().remove(RelayHandler.class);
             ChannelUtils.closeOnFlush(serverChannel);
+            serverChannel = null;
             doConnectServer(ctx, ctx.channel(), request);
         }
     }

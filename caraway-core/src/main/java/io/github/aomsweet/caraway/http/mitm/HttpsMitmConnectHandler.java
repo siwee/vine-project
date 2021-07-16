@@ -2,9 +2,7 @@ package io.github.aomsweet.caraway.http.mitm;
 
 import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.ChannelUtils;
-import io.github.aomsweet.caraway.http.HttpTunnelConnectHandler;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
@@ -14,8 +12,6 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-
-import java.util.ArrayDeque;
 
 /**
  * @author aomsweet
@@ -29,16 +25,14 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
     public HttpsMitmConnectHandler(CarawayServer caraway) {
         super(caraway, logger);
         this.isSsl = true;
-        this.queue = new ArrayDeque<>(2);
     }
 
     @Override
     public void handleHttpRequest0(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
         if (HttpMethod.CONNECT.equals(request.method())) {
             this.serverAddress = resolveServerAddress(request);
-            byte[] bytes = HttpTunnelConnectHandler.TUNNEL_ESTABLISHED_RESPONSE;
-            ByteBuf byteBuf = ctx.alloc().buffer(bytes.length);
-            ctx.writeAndFlush(byteBuf.writeBytes(bytes));
+            ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
+            ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE));
 
             String host = serverAddress.getHostName();
             MitmManager mitmManager = caraway.getMitmManager();
@@ -60,7 +54,6 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
         }
     }
 
-
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
@@ -77,11 +70,6 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
     }
 
     @Override
-    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) {
-        queue.offer(message);
-    }
-
-    @Override
     protected void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request) {
         tryDucking(ctx);
     }
@@ -93,18 +81,6 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
                 flush(ctx);
             } else {
                 release(clientChannel, serverChannel);
-            }
-        }
-    }
-
-    @Override
-    public void flush(ChannelHandlerContext ctx) {
-        Object message;
-        while ((message = queue.poll()) != null) {
-            if (ctx == null) {
-                ReferenceCountUtil.release(message);
-            } else {
-                ctx.pipeline().fireChannelRead(message);
             }
         }
     }
