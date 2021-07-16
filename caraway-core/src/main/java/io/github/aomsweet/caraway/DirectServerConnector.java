@@ -6,8 +6,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -32,7 +30,7 @@ public class DirectServerConnector implements ServerConnector {
                     if (logger.isTraceEnabled()) {
                         ch.pipeline().addLast(new LoggingHandler(LogLevel.TRACE));
                     }
-                    ch.pipeline().addLast(new HttpProxyHandler(InetSocketAddress.createUnresolved("localhost", 9999)));
+                    ch.pipeline().addLast(new HttpProxyHandler(new InetSocketAddress("localhost", 7891)));
                 }
             });
     }
@@ -42,26 +40,7 @@ public class DirectServerConnector implements ServerConnector {
     }
 
     @Override
-    public Future<Channel> channel(InetSocketAddress socketAddress, EventLoopGroup eventLoopGroup) {
-        return channel(socketAddress, eventLoopGroup, eventLoopGroup.next().newPromise());
-    }
-
-    @Override
-    public Future<Channel> channel(InetSocketAddress socketAddress, EventLoopGroup eventLoopGroup, Promise<Channel> promise) {
-        bootstrap.clone(eventLoopGroup).handler(new ChannelInboundHandlerAdapter() {
-
-            @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                ctx.pipeline().remove(this);
-                promise.setSuccess(ctx.channel());
-            }
-
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                promise.setFailure(cause);
-            }
-
-        }).connect(socketAddress);
-        return promise;
+    public ChannelFuture channel(InetSocketAddress socketAddress, EventLoopGroup eventLoopGroup) {
+        return bootstrap.clone(eventLoopGroup).connect(socketAddress);
     }
 }

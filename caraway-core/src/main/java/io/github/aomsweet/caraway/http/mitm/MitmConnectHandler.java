@@ -57,9 +57,9 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     }
 
     @Override
-    protected Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
+    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         this.connected = false;
-        return super.doConnectServer(ctx, clientChannel, request);
+        super.doConnectServer(ctx, clientChannel, request);
     }
 
     @Override

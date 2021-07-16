@@ -1,12 +1,9 @@
 package io.github.aomsweet.caraway;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
@@ -24,33 +21,28 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
         this.caraway = caraway;
     }
 
-    protected Future<Channel> doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) {
-        EventLoop eventLoop = clientChannel.eventLoop();
-        Promise<Channel> promise = eventLoop.newPromise();
-        promise.addListener((FutureListener<Channel>) future -> {
-            final Channel serverChannel = future.getNow();
-            if (future.isSuccess()) {
-                if (clientChannel.isActive()) {
-                    connected(ctx, clientChannel, serverChannel, request);
-                } else {
-                    ChannelUtils.closeOnFlush(serverChannel);
-                }
-            } else {
-                this.failConnect(ctx, clientChannel, request);
-            }
-        });
+    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) {
         try {
             InetSocketAddress serverAddress = getServerAddress(request);
             ServerConnector connector = caraway.getConnector();
-            connector.channel(serverAddress, eventLoop, promise).addListener(future -> {
-                if (!future.isSuccess()) {
+            ChannelFuture channelFuture = connector.channel(serverAddress, clientChannel.eventLoop());
+            channelFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    Channel serverChannel = channelFuture.channel();
+                    if (clientChannel.isActive()) {
+                        connected(ctx, clientChannel, serverChannel, request);
+                    } else {
+                        ChannelUtils.closeOnFlush(serverChannel);
+                    }
+                } else {
+                    logger.error("Unable to establish a remote connection.", future.cause());
                     this.failConnect(ctx, clientChannel, request);
                 }
             });
         } catch (ResolveServerAddressException e) {
-            promise.tryFailure(e);
+            logger.error("Unable to get remote address.", e);
+            release(ctx.channel(), null);
         }
-        return promise;
     }
 
     protected abstract void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Q request);
