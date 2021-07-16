@@ -9,7 +9,6 @@ import io.github.aomsweet.caraway.CarawayServer;
 import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
 import io.github.aomsweet.caraway.http.mitm.BouncyCastleSelfSignedMitmManager;
-import io.github.aomsweet.caraway.http.mitm.SelfSignedMitmManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -36,10 +35,11 @@ public class CarawayLauncher {
         }
         RuntimeMXBean mx = ManagementFactory.getRuntimeMXBean();
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
-        CarawayServer caraway = new CarawayServer()
+        CarawayServer caraway = new CarawayServer.Builder()
             .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
             .withMitmManager(new BouncyCastleSelfSignedMitmManager())
-            .withPort(2228);
+            .withPort(2228)
+            .build();
         caraway.start().whenComplete((channel, cause) -> {
             if (channel == null) {
                 caraway.asyncStop(0).whenComplete((v, e) -> loggerContext.stop());

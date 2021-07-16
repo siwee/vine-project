@@ -9,8 +9,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 
 import javax.net.ssl.SSLException;
@@ -69,7 +70,7 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
         try {
             ChannelPipeline pipeline = serverChannel.pipeline();
             if (isSsl) {
-                SslContext clientSslContext = caraway.getClientSslContext();
+                SslContext clientSslContext = getClientSslContext();
                 pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc(),
                     serverAddress.getHostName(), serverAddress.getPort()));
             }
@@ -121,5 +122,21 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         release(clientChannel, serverChannel);
         logger.error(cause.getMessage(), cause);
+    }
+
+    public SslContext getClientSslContext() throws SSLException {
+        SslContext clientSslContext;
+        if ((clientSslContext = caraway.getClientSslContext()) == null) {
+            synchronized (caraway) {
+                if ((clientSslContext = caraway.getClientSslContext()) == null) {
+                    //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
+                    clientSslContext = SslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .build();
+                    caraway.setClientSslContext(clientSslContext);
+                }
+            }
+        }
+        return clientSslContext;
     }
 }

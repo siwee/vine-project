@@ -8,12 +8,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLException;
 import java.io.Closeable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -31,27 +28,24 @@ public class CarawayServer implements Closeable {
     SslContext clientSslContext;
     ServerConnector connector;
     ProxyAuthenticator proxyAuthenticator;
+
     SocketAddress actualBoundAddress;
     SocketAddress preBoundAddress;
-    int bossEventLoopGroupSize;
-    boolean holdBossEventLoopGroup;
+
+    int acceptorEventLoopGroupSize;
+    boolean holdAcceptorEventLoopGroup;
     EventLoopGroup acceptorEventLoopGroup;
     int workerEventLoopGroupSize;
     boolean holdWorkerEventLoopGroup;
     EventLoopGroup workerEventLoopGroup;
-    long startTimestamp;
 
-    public CarawayServer() {
-        this.bossEventLoopGroupSize = 1;
-        this.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
-        this.connector = new DirectServerConnector();
+    private CarawayServer() {
     }
 
     public CompletionStage<Channel> start() {
-        startTimestamp = System.currentTimeMillis();
         if (acceptorEventLoopGroup == null) {
-            holdBossEventLoopGroup = true;
-            acceptorEventLoopGroup = new NioEventLoopGroup(bossEventLoopGroupSize,
+            holdAcceptorEventLoopGroup = true;
+            acceptorEventLoopGroup = new NioEventLoopGroup(acceptorEventLoopGroupSize,
                 threadFactory("Caraway acceptor-"));
         }
         if (workerEventLoopGroup == null) {
@@ -63,6 +57,7 @@ public class CarawayServer implements Closeable {
     }
 
     private CompletionStage<Channel> doBind() {
+        final long startTimestamp = System.currentTimeMillis();
         ServerBootstrap bootstrap = new ServerBootstrap()
             .group(acceptorEventLoopGroup, workerEventLoopGroup)
             .channel(NioServerSocketChannel.class);
@@ -93,7 +88,6 @@ public class CarawayServer implements Closeable {
                 logger.info("Caraway started in {}s. Listening on: {}",
                     (System.currentTimeMillis() - startTimestamp) / 1000.0, address);
             } else {
-                startTimestamp = 0;
                 logger.error("Caraway start failed.", future.cause());
                 channelFuture.completeExceptionally(future.cause());
             }
@@ -132,7 +126,7 @@ public class CarawayServer implements Closeable {
         logger.info("Caraway is stopping...");
         long stopTimestamp = System.currentTimeMillis();
         CompletableFuture<Void> future;
-        if (holdBossEventLoopGroup && !(acceptorEventLoopGroup.isShutdown() || acceptorEventLoopGroup.isShuttingDown())) {
+        if (holdAcceptorEventLoopGroup && !(acceptorEventLoopGroup.isShutdown() || acceptorEventLoopGroup.isShuttingDown())) {
             future = shutdownEventLoopGroup(acceptorEventLoopGroup, timeout,
                 "Acceptor EventLoopGroup stopped.");
         } else {
@@ -166,123 +160,6 @@ public class CarawayServer implements Closeable {
         return completableFuture;
     }
 
-    public CarawayServer withMitmManager(MitmManager mitmManager) {
-        this.mitmManager = mitmManager;
-        return this;
-    }
-
-    public CarawayServer withClientSslContext(SslContext clientSslContext) {
-        this.clientSslContext = clientSslContext;
-        return this;
-    }
-
-    public CarawayServer withServerConnector(ServerConnector connector) {
-        this.connector = connector;
-        return this;
-    }
-
-    public CarawayServer withProxyAuthenticator(ProxyAuthenticator proxyAuthenticator) {
-        this.proxyAuthenticator = proxyAuthenticator;
-        return this;
-    }
-
-    public CarawayServer withPort(int port) {
-        this.preBoundAddress = new InetSocketAddress(port);
-        return this;
-    }
-
-    public CarawayServer withAddress(String host, int port) {
-        this.preBoundAddress = new InetSocketAddress(host, port);
-        return this;
-    }
-
-    public CarawayServer withAddress(SocketAddress address) {
-        this.preBoundAddress = address;
-        return this;
-    }
-
-    public CarawayServer withBossEventLoopGroupSize(int bossEventLoopGroupSize) {
-        this.bossEventLoopGroupSize = bossEventLoopGroupSize;
-        return this;
-    }
-
-    public CarawayServer withAcceptorEventLoopGroup(EventLoopGroup acceptorEventLoopGroup) {
-        this.acceptorEventLoopGroup = acceptorEventLoopGroup;
-        return this;
-    }
-
-    public CarawayServer withWorkerEventLoopGroupSize(int workerEventLoopGroupSize) {
-        this.workerEventLoopGroupSize = workerEventLoopGroupSize;
-        return this;
-    }
-
-    public CarawayServer withWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
-        this.workerEventLoopGroup = workerEventLoopGroup;
-        return this;
-    }
-
-    public MitmManager getMitmManager() {
-        return mitmManager;
-    }
-
-    public SslContext getClientSslContext() throws SSLException {
-        if (clientSslContext == null) {
-            synchronized (this) {
-                if (clientSslContext == null) {
-                    //https://github.com/GlowstoneMC/Glowstone/blob/5b89f945b4/src/main/java/net/glowstone/net/http/HttpClient.java
-                    clientSslContext = SslContextBuilder.forClient()
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .build();
-                }
-            }
-        }
-        return clientSslContext;
-    }
-
-    public ServerConnector getConnector() {
-        return connector;
-    }
-
-    public ProxyAuthenticator getProxyAuthenticator() {
-        return proxyAuthenticator;
-    }
-
-    public SocketAddress getActualBoundAddress() {
-        return actualBoundAddress;
-    }
-
-    public SocketAddress getPreBoundAddress() {
-        return preBoundAddress;
-    }
-
-    public int getBossEventLoopGroupSize() {
-        return bossEventLoopGroupSize;
-    }
-
-    public boolean isHoldBossEventLoopGroup() {
-        return holdBossEventLoopGroup;
-    }
-
-    public EventLoopGroup getAcceptorEventLoopGroup() {
-        return acceptorEventLoopGroup;
-    }
-
-    public int getWorkerEventLoopGroupSize() {
-        return workerEventLoopGroupSize;
-    }
-
-    public boolean isHoldWorkerEventLoopGroup() {
-        return holdWorkerEventLoopGroup;
-    }
-
-    public EventLoopGroup getWorkerEventLoopGroup() {
-        return workerEventLoopGroup;
-    }
-
-    public long getStartTimestamp() {
-        return startTimestamp;
-    }
-
     @Override
     public void close() {
         try {
@@ -290,5 +167,203 @@ public class CarawayServer implements Closeable {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /*
+    #####################################################################################
+    ################################## Getter | Setter ##################################
+    #####################################################################################
+     */
+
+    public MitmManager getMitmManager() {
+        return mitmManager;
+    }
+
+    public CarawayServer setMitmManager(MitmManager mitmManager) {
+        this.mitmManager = mitmManager;
+        return this;
+    }
+
+    public SslContext getClientSslContext() {
+        return clientSslContext;
+    }
+
+    public CarawayServer setClientSslContext(SslContext clientSslContext) {
+        this.clientSslContext = clientSslContext;
+        return this;
+    }
+
+    public ServerConnector getConnector() {
+        return connector;
+    }
+
+    public CarawayServer setConnector(ServerConnector connector) {
+        this.connector = connector;
+        return this;
+    }
+
+    public ProxyAuthenticator getProxyAuthenticator() {
+        return proxyAuthenticator;
+    }
+
+    public CarawayServer setProxyAuthenticator(ProxyAuthenticator proxyAuthenticator) {
+        this.proxyAuthenticator = proxyAuthenticator;
+        return this;
+    }
+
+    public SocketAddress getActualBoundAddress() {
+        return actualBoundAddress;
+    }
+
+    public CarawayServer setActualBoundAddress(SocketAddress actualBoundAddress) {
+        this.actualBoundAddress = actualBoundAddress;
+        return this;
+    }
+
+    public SocketAddress getPreBoundAddress() {
+        return preBoundAddress;
+    }
+
+    public CarawayServer setPreBoundAddress(SocketAddress preBoundAddress) {
+        this.preBoundAddress = preBoundAddress;
+        return this;
+    }
+
+    public int getAcceptorEventLoopGroupSize() {
+        return acceptorEventLoopGroupSize;
+    }
+
+    public CarawayServer setAcceptorEventLoopGroupSize(int acceptorEventLoopGroupSize) {
+        this.acceptorEventLoopGroupSize = acceptorEventLoopGroupSize;
+        return this;
+    }
+
+    public boolean isHoldAcceptorEventLoopGroup() {
+        return holdAcceptorEventLoopGroup;
+    }
+
+    public CarawayServer setHoldAcceptorEventLoopGroup(boolean holdAcceptorEventLoopGroup) {
+        this.holdAcceptorEventLoopGroup = holdAcceptorEventLoopGroup;
+        return this;
+    }
+
+    public EventLoopGroup getAcceptorEventLoopGroup() {
+        return acceptorEventLoopGroup;
+    }
+
+    public CarawayServer setAcceptorEventLoopGroup(EventLoopGroup acceptorEventLoopGroup) {
+        this.acceptorEventLoopGroup = acceptorEventLoopGroup;
+        return this;
+    }
+
+    public int getWorkerEventLoopGroupSize() {
+        return workerEventLoopGroupSize;
+    }
+
+    public CarawayServer setWorkerEventLoopGroupSize(int workerEventLoopGroupSize) {
+        this.workerEventLoopGroupSize = workerEventLoopGroupSize;
+        return this;
+    }
+
+    public boolean isHoldWorkerEventLoopGroup() {
+        return holdWorkerEventLoopGroup;
+    }
+
+    public CarawayServer setHoldWorkerEventLoopGroup(boolean holdWorkerEventLoopGroup) {
+        this.holdWorkerEventLoopGroup = holdWorkerEventLoopGroup;
+        return this;
+    }
+
+    public EventLoopGroup getWorkerEventLoopGroup() {
+        return workerEventLoopGroup;
+    }
+
+    public CarawayServer setWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
+        this.workerEventLoopGroup = workerEventLoopGroup;
+        return this;
+    }
+
+    /**
+     * Builder
+     */
+    public static class Builder {
+
+        CarawayServer caraway;
+
+        public Builder() {
+            caraway = new CarawayServer();
+        }
+
+        public CarawayServer build() {
+            if (caraway.getAcceptorEventLoopGroup() == null) {
+                caraway.acceptorEventLoopGroupSize = 1;
+            }
+            if (caraway.getWorkerEventLoopGroup() == null) {
+                caraway.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
+            }
+            if (caraway.connector == null) {
+                caraway.connector = new DirectServerConnector();
+            }
+            if (caraway.preBoundAddress == null) {
+                caraway.preBoundAddress = new InetSocketAddress("127.0.0.1", 2228);
+            }
+            return caraway;
+        }
+
+        public Builder withMitmManager(MitmManager mitmManager) {
+            caraway.mitmManager = mitmManager;
+            return this;
+        }
+
+        public Builder withClientSslContext(SslContext clientSslContext) {
+            caraway.clientSslContext = clientSslContext;
+            return this;
+        }
+
+        public Builder withServerConnector(ServerConnector connector) {
+            caraway.connector = connector;
+            return this;
+        }
+
+        public Builder withProxyAuthenticator(ProxyAuthenticator proxyAuthenticator) {
+            caraway.proxyAuthenticator = proxyAuthenticator;
+            return this;
+        }
+
+        public Builder withPort(int port) {
+            caraway.preBoundAddress = new InetSocketAddress(port);
+            return this;
+        }
+
+        public Builder withAddress(String host, int port) {
+            caraway.preBoundAddress = new InetSocketAddress(host, port);
+            return this;
+        }
+
+        public Builder withAddress(SocketAddress address) {
+            caraway.preBoundAddress = address;
+            return this;
+        }
+
+        public Builder withBossEventLoopGroupSize(int bossEventLoopGroupSize) {
+            caraway.acceptorEventLoopGroupSize = bossEventLoopGroupSize;
+            return this;
+        }
+
+        public Builder withAcceptorEventLoopGroup(EventLoopGroup acceptorEventLoopGroup) {
+            caraway.acceptorEventLoopGroup = acceptorEventLoopGroup;
+            return this;
+        }
+
+        public Builder withWorkerEventLoopGroupSize(int workerEventLoopGroupSize) {
+            caraway.workerEventLoopGroupSize = workerEventLoopGroupSize;
+            return this;
+        }
+
+        public Builder withWorkerEventLoopGroup(EventLoopGroup workerEventLoopGroup) {
+            caraway.workerEventLoopGroup = workerEventLoopGroup;
+            return this;
+        }
+
     }
 }
