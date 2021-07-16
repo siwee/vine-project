@@ -7,6 +7,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyHandler;
+import io.netty.handler.proxy.Socks4ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -16,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * @author aomsweet
@@ -289,6 +294,7 @@ public class CarawayServer implements Closeable {
     public static class Builder {
 
         CarawayServer caraway;
+        Supplier<ProxyHandler> proxyHandler;
 
         public Builder() {
             caraway = new CarawayServer();
@@ -304,6 +310,9 @@ public class CarawayServer implements Closeable {
             if (caraway.connector == null) {
                 caraway.connector = new DirectServerConnector();
             }
+            if (proxyHandler != null) {
+                caraway.connector.switchUpstreamProxy(proxyHandler);
+            }
             if (caraway.preBoundAddress == null) {
                 caraway.preBoundAddress = new InetSocketAddress("127.0.0.1", 2228);
             }
@@ -314,6 +323,35 @@ public class CarawayServer implements Closeable {
             caraway.mitmManager = mitmManager;
             return this;
         }
+
+        public Builder withUpstreamProxy(Supplier<ProxyHandler> proxyHandler) {
+            this.proxyHandler = proxyHandler;
+            return this;
+        }
+
+        public Builder withUpstreamProxy(ProxyType type, String host, int port) {
+            return withUpstreamProxy(type, host, port, null, null);
+        }
+
+        public Builder withUpstreamProxy(ProxyType type, String host, int port, String username, String password) {
+            Supplier<ProxyHandler> proxyHandler;
+            switch (type) {
+                case SOCKS5:
+                    proxyHandler = () -> new Socks5ProxyHandler(new InetSocketAddress(host, port), username, password);
+                    break;
+                case SOCKS4a:
+                    proxyHandler = () -> new Socks4ProxyHandler(new InetSocketAddress(host, port));
+                    break;
+                case HTTP:
+                    proxyHandler = () -> new HttpProxyHandler(new InetSocketAddress(host, port), username, password);
+                    break;
+                default:
+                    throw new RuntimeException("UnKnow proxy type.");
+            }
+            this.proxyHandler = proxyHandler;
+            return this;
+        }
+
 
         public Builder withClientSslContext(SslContext clientSslContext) {
             caraway.clientSslContext = clientSslContext;

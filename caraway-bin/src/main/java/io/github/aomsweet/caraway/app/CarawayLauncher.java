@@ -6,6 +6,7 @@ import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ProxyType;
 import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
 import io.github.aomsweet.caraway.http.mitm.BouncyCastleSelfSignedMitmManager;
@@ -37,6 +38,8 @@ public class CarawayLauncher {
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer.Builder()
             .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
+            // .withUpstreamProxy(() -> new HttpProxyHandler(new InetSocketAddress("localhost", 7890)))
+            .withUpstreamProxy(ProxyType.SOCKS5, "127.0.0.1", 7890)
             .withMitmManager(new BouncyCastleSelfSignedMitmManager())
             .withPort(2228)
             .build();
