@@ -1,0 +1,12 @@
+{
+    "resources": {
+        "includes": [
+            {
+                "pattern": "caraway/cert/ca.crt"
+            },
+            {
+                "pattern": "caraway/cert/ca_private.key"
+            }
+        ]
+    }
+}
