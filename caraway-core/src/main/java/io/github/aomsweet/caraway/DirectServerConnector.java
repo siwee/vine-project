@@ -93,12 +93,10 @@ public class DirectServerConnector implements ServerConnector {
                                   Bootstrap bootstrap,
                                   CompleteChannelPromise promise) {
         Supplier<ProxyHandler> proxyHandler = proxiesChain.poll();
-        ChannelInitializer<Channel> channelInitializer = channelInitializer(proxyHandler);
-        ChannelFuture channelFuture = bootstrap.handler(channelInitializer).connect(socketAddress);
-
-        channelFuture.addListener(future -> {
+        ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
+        bootstrap.handler(initHandler).connect(socketAddress).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
-                promise.setChannel(channelFuture.channel()).setSuccess();
+                promise.setChannel(future.channel()).setSuccess();
             } else {
                 Throwable cause = future.cause();
                 logger.warn("Connection failed.", cause);
