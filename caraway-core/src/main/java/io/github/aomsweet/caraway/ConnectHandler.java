@@ -25,7 +25,7 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
         try {
             InetSocketAddress serverAddress = getServerAddress(request);
             ServerConnector connector = caraway.getConnector();
-            ChannelFuture channelFuture = connector.channel(serverAddress, clientChannel.eventLoop());
+            ChannelFuture channelFuture = connector.channel(serverAddress, ctx);
             channelFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     Channel serverChannel = channelFuture.channel();

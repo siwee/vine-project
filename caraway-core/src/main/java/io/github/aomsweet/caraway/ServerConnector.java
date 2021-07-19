@@ -1,10 +1,11 @@
 package io.github.aomsweet.caraway;
 
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.proxy.ProxyHandler;
 
 import java.net.InetSocketAddress;
+import java.util.Queue;
 import java.util.function.Supplier;
 
 /**
@@ -12,7 +13,9 @@ import java.util.function.Supplier;
  */
 public interface ServerConnector {
 
-    ChannelFuture channel(InetSocketAddress socketAddress, EventLoopGroup eventLoopGroup);
+    ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx);
+
+    ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, Queue<Supplier<ProxyHandler>> upstreamProxyChain);
 
     void switchUpstreamProxy(Supplier<ProxyHandler> upstreamProxySupplier);
 
