@@ -1,13 +1,8 @@
 package io.github.aomsweet.caraway.socks;
 
-import io.github.aomsweet.caraway.CarawayServer;
-import io.github.aomsweet.caraway.ChannelUtils;
-import io.github.aomsweet.caraway.ConnectHandler;
-import io.github.aomsweet.caraway.ProxyAuthenticator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
+import io.github.aomsweet.caraway.*;
+import io.github.aomsweet.caraway.auth.Credentials;
+import io.netty.channel.*;
 import io.netty.handler.codec.socksx.v5.*;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -26,44 +21,82 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     public static final DefaultSocks5PasswordAuthResponse AUTH_SUCCESS = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS);
     public static final DefaultSocks5PasswordAuthResponse AUTH_FAILURE = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE);
 
+    boolean alone;
+    Credentials credentials;
+
     public Socks5ConnectHandler(CarawayServer caraway) {
+        this(caraway, false);
+    }
+
+    public Socks5ConnectHandler(CarawayServer caraway, boolean alone) {
         super(caraway, logger);
+        this.alone = alone;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ChannelPipeline pipeline = ctx.pipeline();
         if (msg instanceof Socks5InitialRequest) {
-            pipeline.remove(Socks5InitialRequestDecoder.class);
-            if (caraway.getProxyAuthenticator() != null ||
-                ((Socks5InitialRequest) msg).authMethods().contains(Socks5AuthMethod.PASSWORD)) {
-                pipeline.addFirst(new Socks5PasswordAuthRequestDecoder());
-                ctx.writeAndFlush(PASSWORD_RESPONSE);
-            } else {
-                pipeline.addFirst(new Socks5CommandRequestDecoder());
-                ctx.writeAndFlush(NO_AUTH_RESPONSE);
-            }
+            initialRequestHandler(ctx, (Socks5InitialRequest) msg, pipeline);
         } else if (msg instanceof Socks5PasswordAuthRequest) {
-            pipeline.remove(Socks5PasswordAuthRequestDecoder.class);
-            pipeline.addFirst(new Socks5CommandRequestDecoder());
-            ProxyAuthenticator proxyAuthenticator = caraway.getProxyAuthenticator();
-            DefaultSocks5PasswordAuthResponse authResponse = proxyAuthenticator == null
-                || proxyAuthenticator.authenticate((Socks5PasswordAuthRequest) msg)
-                ? AUTH_SUCCESS : AUTH_FAILURE;
-            ctx.writeAndFlush(authResponse);
+            authRequestHandler(ctx, (Socks5PasswordAuthRequest) msg, pipeline);
         } else if (msg instanceof Socks5CommandRequest) {
-            pipeline.remove(Socks5CommandRequestDecoder.class);
-            Socks5CommandRequest socks5CmdRequest = (Socks5CommandRequest) msg;
-            if (socks5CmdRequest.type() == Socks5CommandType.CONNECT) {
-                doConnectServer(ctx, ctx.channel(), (Socks5CommandRequest) msg);
-            } else {
-                logger.error("Unsupported Socks5 {} command.", socks5CmdRequest.type());
-                ctx.close();
-            }
+            cmdRequestHandler(ctx, (Socks5CommandRequest) msg, pipeline);
         } else {
             ReferenceCountUtil.release(msg);
             ctx.close();
         }
+    }
+
+    protected void initialRequestHandler(ChannelHandlerContext ctx, Socks5InitialRequest initialRequest, ChannelPipeline pipeline) {
+        pipeline.remove(Socks5InitialRequestDecoder.class);
+        Object response;
+        if (caraway.getProxyAuthenticator() != null ||
+            initialRequest.authMethods().contains(Socks5AuthMethod.PASSWORD)) {
+            pipeline.addFirst(new Socks5PasswordAuthRequestDecoder());
+            response = PASSWORD_RESPONSE;
+        } else {
+            pipeline.addFirst(new Socks5CommandRequestDecoder());
+            response = NO_AUTH_RESPONSE;
+        }
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+    }
+
+    protected void authRequestHandler(ChannelHandlerContext ctx, Socks5PasswordAuthRequest authRequest, ChannelPipeline pipeline) {
+        String username = authRequest.username();
+        String password = authRequest.password();
+        if (alone && (caraway.getSocks5ChainedProxyManager()) != null) {
+            credentials = new Credentials(username, password);
+        }
+        ProxyAuthenticator proxyAuthenticator = caraway.getProxyAuthenticator();
+        if (proxyAuthenticator == null || proxyAuthenticator.authenticate(username, password)) {
+            pipeline.remove(Socks5PasswordAuthRequestDecoder.class);
+            pipeline.addFirst(new Socks5CommandRequestDecoder());
+            ctx.writeAndFlush(AUTH_SUCCESS).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        } else {
+            ctx.writeAndFlush(AUTH_FAILURE).addListener(ChannelFutureListener.CLOSE);
+        }
+    }
+
+    protected void cmdRequestHandler(ChannelHandlerContext ctx, Socks5CommandRequest socks5CmdRequest, ChannelPipeline pipeline) {
+        pipeline.remove(Socks5CommandRequestDecoder.class);
+        if (socks5CmdRequest.type() == Socks5CommandType.CONNECT) {
+            doConnectServer(ctx, ctx.channel(), socks5CmdRequest);
+        } else {
+            logger.error("Unsupported Socks5 {} command.", socks5CmdRequest.type());
+            ctx.close();
+        }
+    }
+
+
+    @Override
+    protected Credentials getCredentials(Socks5CommandRequest request) {
+        return credentials;
+    }
+
+    @Override
+    protected ChainedProxyManager<Socks5CommandRequest> getChainedProxyManager() {
+        return alone ? caraway.getSocks5ChainedProxyManager() : null;
     }
 
     @Override

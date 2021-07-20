@@ -59,7 +59,11 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
                 logKnownVersion(ctx, version);
                 pipeline.addLast(new Socks5InitialRequestDecoder());
                 pipeline.addLast(Socks5ServerEncoder.DEFAULT);
-                pipeline.addLast(socks5ConnectHandler);
+                if (caraway.getSocks5ChainedProxyManager() == null) {
+                    pipeline.addLast(socks5ConnectHandler);
+                } else {
+                    pipeline.addLast(new Socks5ConnectHandler(caraway, true));
+                }
             } else {
                 pipeline.addLast(new HttpRequestDecoder());
                 pipeline.addLast(httpServerHandler);

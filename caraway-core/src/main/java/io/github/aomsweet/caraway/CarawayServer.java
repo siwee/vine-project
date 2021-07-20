@@ -5,6 +5,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.socksx.v4.Socks4CommandRequest;
+import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
@@ -29,6 +32,9 @@ public class CarawayServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(CarawayServer.class);
 
+    ChainedProxyManager<HttpRequest> httpChainedProxyManager;
+    ChainedProxyManager<Socks4CommandRequest> socks4ChainedProxyManager;
+    ChainedProxyManager<Socks5CommandRequest> socks5ChainedProxyManager;
     MitmManager mitmManager;
     SslContext clientSslContext;
     ServerConnector connector;
@@ -180,6 +186,33 @@ public class CarawayServer implements Closeable {
     #####################################################################################
      */
 
+    public ChainedProxyManager<HttpRequest> getHttpChainedProxyManager() {
+        return httpChainedProxyManager;
+    }
+
+    public CarawayServer setHttpChainedProxyManager(ChainedProxyManager<HttpRequest> httpChainedProxyManager) {
+        this.httpChainedProxyManager = httpChainedProxyManager;
+        return this;
+    }
+
+    public ChainedProxyManager<Socks4CommandRequest> getSocks4ChainedProxyManager() {
+        return socks4ChainedProxyManager;
+    }
+
+    public CarawayServer setSocks4ChainedProxyManager(ChainedProxyManager<Socks4CommandRequest> socks4ChainedProxyManager) {
+        this.socks4ChainedProxyManager = socks4ChainedProxyManager;
+        return this;
+    }
+
+    public ChainedProxyManager<Socks5CommandRequest> getSocks5ChainedProxyManager() {
+        return socks5ChainedProxyManager;
+    }
+
+    public CarawayServer setSocks5ChainedProxyManager(ChainedProxyManager<Socks5CommandRequest> socks5ChainedProxyManager) {
+        this.socks5ChainedProxyManager = socks5ChainedProxyManager;
+        return this;
+    }
+
     public MitmManager getMitmManager() {
         return mitmManager;
     }
@@ -318,6 +351,22 @@ public class CarawayServer implements Closeable {
             }
             return caraway;
         }
+
+        public Builder withHttpChainedProxyManager(ChainedProxyManager<HttpRequest> httpChainedProxyManager) {
+            caraway.httpChainedProxyManager = httpChainedProxyManager;
+            return this;
+        }
+
+        public Builder withSocks4ChainedProxyManager(ChainedProxyManager<Socks4CommandRequest> socks4ChainedProxyManager) {
+            caraway.socks4ChainedProxyManager = socks4ChainedProxyManager;
+            return this;
+        }
+
+        public Builder withSocks5ChainedProxyManager(ChainedProxyManager<Socks5CommandRequest> socks5ChainedProxyManager) {
+            caraway.socks5ChainedProxyManager = socks5ChainedProxyManager;
+            return this;
+        }
+
 
         public Builder withMitmManager(MitmManager mitmManager) {
             caraway.mitmManager = mitmManager;

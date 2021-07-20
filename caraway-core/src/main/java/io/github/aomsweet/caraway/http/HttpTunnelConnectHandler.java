@@ -35,6 +35,9 @@ public class HttpTunnelConnectHandler extends HttpConnectHandler {
 
     @Override
     public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+        if(getChainedProxyManager() != null){
+
+        }
         doConnectServer(ctx, ctx.channel(), httpRequest);
     }
 

@@ -1,12 +1,16 @@
 package io.github.aomsweet.caraway;
 
+import io.github.aomsweet.caraway.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
+import java.util.Queue;
+import java.util.function.Supplier;
 
 /**
  * @author aomsweet
@@ -25,7 +29,10 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
         try {
             InetSocketAddress serverAddress = getServerAddress(request);
             ServerConnector connector = caraway.getConnector();
-            ChannelFuture channelFuture = connector.channel(serverAddress, ctx);
+            Queue<Supplier<ProxyHandler>> chainedProxies = chainedProxies(request, clientChannel, serverAddress);
+            ChannelFuture channelFuture = chainedProxies == null
+                ? connector.channel(serverAddress, ctx)
+                : connector.channel(serverAddress, ctx, chainedProxies);
             channelFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     Channel serverChannel = channelFuture.channel();
@@ -44,6 +51,19 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
             release(ctx.channel(), null);
         }
     }
+
+    protected Queue<Supplier<ProxyHandler>> chainedProxies(Q request,
+                                                           Channel clientChannel,
+                                                           InetSocketAddress serverAddress) {
+        ChainedProxyManager<Q> chainedProxyManager = getChainedProxyManager();
+        return chainedProxyManager == null ? null
+            : chainedProxyManager.lookupChainedProxies(request, getCredentials(request),
+            (InetSocketAddress) clientChannel.remoteAddress(), serverAddress);
+    }
+
+    protected abstract Credentials getCredentials(Q request);
+
+    protected abstract ChainedProxyManager<Q> getChainedProxyManager();
 
     protected abstract void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Q request);
 

@@ -1,8 +1,10 @@
 package io.github.aomsweet.caraway.socks;
 
 import io.github.aomsweet.caraway.CarawayServer;
+import io.github.aomsweet.caraway.ChainedProxyManager;
 import io.github.aomsweet.caraway.ChannelUtils;
 import io.github.aomsweet.caraway.ConnectHandler;
+import io.github.aomsweet.caraway.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,6 +41,16 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
             ReferenceCountUtil.release(msg);
             ctx.close();
         }
+    }
+
+    @Override
+    protected Credentials getCredentials(Socks4CommandRequest request) {
+        return null;
+    }
+
+    @Override
+    protected ChainedProxyManager<Socks4CommandRequest> getChainedProxyManager() {
+        return caraway.getSocks4ChainedProxyManager();
     }
 
     @Override

@@ -10,12 +10,18 @@ import io.github.aomsweet.caraway.ProxyType;
 import io.github.aomsweet.caraway.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.caraway.app.logback.LogbackConfigurator;
 import io.github.aomsweet.caraway.http.mitm.BouncyCastleSelfSignedMitmManager;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.function.Supplier;
 
 /**
  * @author aomsweet
@@ -37,9 +43,16 @@ public class CarawayLauncher {
         RuntimeMXBean mx = ManagementFactory.getRuntimeMXBean();
         logger.info("Starting Caraway on {} ({})", mx.getName(), System.getProperty("user.dir"));
         CarawayServer caraway = new CarawayServer.Builder()
-            .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
+            // .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
             // .withUpstreamProxy(() -> new HttpProxyHandler(new InetSocketAddress("localhost", 7890)))
             .withUpstreamProxy(ProxyType.SOCKS5, "127.0.0.1", 7890)
+            .withSocks5ChainedProxyManager((request, credentials, clientAddress, serverAddress) -> {
+                Queue<Supplier<ProxyHandler>> queue = new ArrayDeque<>();
+                queue.offer(() -> new HttpProxyHandler(new InetSocketAddress("127.0.0.1", 7891)));
+                // queue.offer(() -> new HttpProxyHandler(new InetSocketAddress("127.0.0.1", 7892)));
+                queue.offer(() -> new HttpProxyHandler(new InetSocketAddress("127.0.0.1", 7890)));
+                return queue;
+            })
             .withMitmManager(new BouncyCastleSelfSignedMitmManager())
             .withPort(2228)
             .build();
