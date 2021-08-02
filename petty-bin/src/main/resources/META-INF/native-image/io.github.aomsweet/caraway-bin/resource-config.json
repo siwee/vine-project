@@ -1,0 +1,12 @@
+{
+    "resources": {
+        "includes": [
+            {
+                "pattern": "petty/cert/ca.crt"
+            },
+            {
+                "pattern": "petty/cert/ca_private.key"
+            }
+        ]
+    }
+}
