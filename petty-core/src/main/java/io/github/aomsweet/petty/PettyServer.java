@@ -32,9 +32,9 @@ public class PettyServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(PettyServer.class);
 
-    ChainedProxyManager<HttpRequest> httpChainedProxyManager;
-    ChainedProxyManager<Socks4CommandRequest> socks4ChainedProxyManager;
-    ChainedProxyManager<Socks5CommandRequest> socks5ChainedProxyManager;
+    UpstreamProxyManager<HttpRequest> httpUpstreamProxyManager;
+    UpstreamProxyManager<Socks4CommandRequest> socks4UpstreamProxyManager;
+    UpstreamProxyManager<Socks5CommandRequest> socks5UpstreamProxyManager;
     MitmManager mitmManager;
     SslContext clientSslContext;
     ServerConnector connector;
@@ -186,30 +186,30 @@ public class PettyServer implements Closeable {
     #####################################################################################
      */
 
-    public ChainedProxyManager<HttpRequest> getHttpChainedProxyManager() {
-        return httpChainedProxyManager;
+    public UpstreamProxyManager<HttpRequest> getHttpChainedProxyManager() {
+        return httpUpstreamProxyManager;
     }
 
-    public PettyServer setHttpChainedProxyManager(ChainedProxyManager<HttpRequest> httpChainedProxyManager) {
-        this.httpChainedProxyManager = httpChainedProxyManager;
+    public PettyServer setHttpChainedProxyManager(UpstreamProxyManager<HttpRequest> httpUpstreamProxyManager) {
+        this.httpUpstreamProxyManager = httpUpstreamProxyManager;
         return this;
     }
 
-    public ChainedProxyManager<Socks4CommandRequest> getSocks4ChainedProxyManager() {
-        return socks4ChainedProxyManager;
+    public UpstreamProxyManager<Socks4CommandRequest> getSocks4ChainedProxyManager() {
+        return socks4UpstreamProxyManager;
     }
 
-    public PettyServer setSocks4ChainedProxyManager(ChainedProxyManager<Socks4CommandRequest> socks4ChainedProxyManager) {
-        this.socks4ChainedProxyManager = socks4ChainedProxyManager;
+    public PettyServer setSocks4ChainedProxyManager(UpstreamProxyManager<Socks4CommandRequest> socks4UpstreamProxyManager) {
+        this.socks4UpstreamProxyManager = socks4UpstreamProxyManager;
         return this;
     }
 
-    public ChainedProxyManager<Socks5CommandRequest> getSocks5ChainedProxyManager() {
-        return socks5ChainedProxyManager;
+    public UpstreamProxyManager<Socks5CommandRequest> getSocks5ChainedProxyManager() {
+        return socks5UpstreamProxyManager;
     }
 
-    public PettyServer setSocks5ChainedProxyManager(ChainedProxyManager<Socks5CommandRequest> socks5ChainedProxyManager) {
-        this.socks5ChainedProxyManager = socks5ChainedProxyManager;
+    public PettyServer setSocks5ChainedProxyManager(UpstreamProxyManager<Socks5CommandRequest> socks5UpstreamProxyManager) {
+        this.socks5UpstreamProxyManager = socks5UpstreamProxyManager;
         return this;
     }
 
@@ -352,18 +352,18 @@ public class PettyServer implements Closeable {
             return petty;
         }
 
-        public Builder withHttpChainedProxyManager(ChainedProxyManager<HttpRequest> httpChainedProxyManager) {
-            petty.httpChainedProxyManager = httpChainedProxyManager;
+        public Builder withHttpChainedProxyManager(UpstreamProxyManager<HttpRequest> httpUpstreamProxyManager) {
+            petty.httpUpstreamProxyManager = httpUpstreamProxyManager;
             return this;
         }
 
-        public Builder withSocks4ChainedProxyManager(ChainedProxyManager<Socks4CommandRequest> socks4ChainedProxyManager) {
-            petty.socks4ChainedProxyManager = socks4ChainedProxyManager;
+        public Builder withSocks4ChainedProxyManager(UpstreamProxyManager<Socks4CommandRequest> socks4UpstreamProxyManager) {
+            petty.socks4UpstreamProxyManager = socks4UpstreamProxyManager;
             return this;
         }
 
-        public Builder withSocks5ChainedProxyManager(ChainedProxyManager<Socks5CommandRequest> socks5ChainedProxyManager) {
-            petty.socks5ChainedProxyManager = socks5ChainedProxyManager;
+        public Builder withSocks5ChainedProxyManager(UpstreamProxyManager<Socks5CommandRequest> socks5UpstreamProxyManager) {
+            petty.socks5UpstreamProxyManager = socks5UpstreamProxyManager;
             return this;
         }
 

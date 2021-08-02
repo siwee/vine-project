@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 /**
  * @author aomsweet
  */
-public interface ChainedProxyManager<T> {
+public interface UpstreamProxyManager<T> {
 
     Queue<Supplier<ProxyHandler>> lookupChainedProxies(T request,
                                                        Credentials credentials,

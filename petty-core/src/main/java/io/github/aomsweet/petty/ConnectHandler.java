@@ -55,15 +55,15 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
     protected Queue<Supplier<ProxyHandler>> chainedProxies(Q request,
                                                            Channel clientChannel,
                                                            InetSocketAddress serverAddress) {
-        ChainedProxyManager<Q> chainedProxyManager = getChainedProxyManager();
-        return chainedProxyManager == null ? null
-            : chainedProxyManager.lookupChainedProxies(request, getCredentials(request),
+        UpstreamProxyManager<Q> upstreamProxyManager = getChainedProxyManager();
+        return upstreamProxyManager == null ? null
+            : upstreamProxyManager.lookupChainedProxies(request, getCredentials(request),
             (InetSocketAddress) clientChannel.remoteAddress(), serverAddress);
     }
 
     protected abstract Credentials getCredentials(Q request);
 
-    protected abstract ChainedProxyManager<Q> getChainedProxyManager();
+    protected abstract UpstreamProxyManager<Q> getChainedProxyManager();
 
     protected abstract void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Q request);
 

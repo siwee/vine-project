@@ -1,7 +1,7 @@
 package io.github.aomsweet.petty.socks;
 
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ChainedProxyManager;
+import io.github.aomsweet.petty.UpstreamProxyManager;
 import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.ConnectHandler;
 import io.github.aomsweet.petty.auth.Credentials;
@@ -49,7 +49,7 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     }
 
     @Override
-    protected ChainedProxyManager<Socks4CommandRequest> getChainedProxyManager() {
+    protected UpstreamProxyManager<Socks4CommandRequest> getChainedProxyManager() {
         return petty.getSocks4ChainedProxyManager();
     }
 

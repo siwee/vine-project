@@ -95,7 +95,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     }
 
     @Override
-    protected ChainedProxyManager<Socks5CommandRequest> getChainedProxyManager() {
+    protected UpstreamProxyManager<Socks5CommandRequest> getChainedProxyManager() {
         return alone ? petty.getSocks5ChainedProxyManager() : null;
     }
 
