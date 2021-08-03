@@ -65,7 +65,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     protected void authRequestHandler(ChannelHandlerContext ctx, Socks5PasswordAuthRequest authRequest, ChannelPipeline pipeline) {
         String username = authRequest.username();
         String password = authRequest.password();
-        if (alone && (petty.getSocks5ChainedProxyManager()) != null) {
+        if (alone && (petty.getUpstreamProxyManager()) != null) {
             credentials = new Credentials(username, password);
         }
         ProxyAuthenticator proxyAuthenticator = petty.getProxyAuthenticator();
@@ -92,11 +92,6 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     @Override
     protected Credentials getCredentials(Socks5CommandRequest request) {
         return credentials;
-    }
-
-    @Override
-    protected UpstreamProxyManager<Socks5CommandRequest> getChainedProxyManager() {
-        return alone ? petty.getSocks5ChainedProxyManager() : null;
     }
 
     @Override

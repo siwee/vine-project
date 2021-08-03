@@ -59,7 +59,7 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
                 logKnownVersion(ctx, version);
                 pipeline.addLast(new Socks5InitialRequestDecoder());
                 pipeline.addLast(Socks5ServerEncoder.DEFAULT);
-                if (petty.getSocks5ChainedProxyManager() == null) {
+                if (petty.getUpstreamProxyManager() == null) {
                     pipeline.addLast(socks5ConnectHandler);
                 } else {
                     pipeline.addLast(new Socks5ConnectHandler(petty, true));

@@ -49,11 +49,6 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     }
 
     @Override
-    protected UpstreamProxyManager<Socks4CommandRequest> getChainedProxyManager() {
-        return petty.getSocks4ChainedProxyManager();
-    }
-
-    @Override
     protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks4CommandRequest request) {
         clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
             if (future.isSuccess()) {

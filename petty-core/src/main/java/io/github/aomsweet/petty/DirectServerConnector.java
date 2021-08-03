@@ -10,8 +10,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.Queue;
-import java.util.function.Supplier;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * @author aomsweet
@@ -21,7 +21,6 @@ public class DirectServerConnector implements ServerConnector {
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(DirectServerConnector.class);
 
     Bootstrap bootstrap;
-    Supplier<ProxyHandler> upstreamProxySupplier;
 
     public DirectServerConnector() {
         this.bootstrap = bootstrap();
@@ -29,16 +28,6 @@ public class DirectServerConnector implements ServerConnector {
 
     public DirectServerConnector(Bootstrap bootstrap) {
         this.bootstrap = bootstrap;
-    }
-
-    public DirectServerConnector(Supplier<ProxyHandler> upstreamProxySupplier) {
-        this.bootstrap = bootstrap();
-        this.upstreamProxySupplier = upstreamProxySupplier;
-    }
-
-    public DirectServerConnector(Bootstrap bootstrap, Supplier<ProxyHandler> upstreamProxySupplier) {
-        this.bootstrap = bootstrap;
-        this.upstreamProxySupplier = upstreamProxySupplier;
     }
 
     public Bootstrap bootstrap() {
@@ -53,10 +42,10 @@ public class DirectServerConnector implements ServerConnector {
     }
 
     public ChannelInitializer<Channel> channelInitializer() {
-        return channelInitializer(upstreamProxySupplier);
+        return channelInitializer(null);
     }
 
-    public ChannelInitializer<Channel> channelInitializer(Supplier<ProxyHandler> proxyHandler) {
+    public ChannelInitializer<Channel> channelInitializer(ProxyHandler proxyHandler) {
         return new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -64,7 +53,7 @@ public class DirectServerConnector implements ServerConnector {
                     ch.pipeline().addLast(new LoggingHandler(LogLevel.TRACE));
                 }
                 if (proxyHandler != null) {
-                    ch.pipeline().addLast(proxyHandler.get());
+                    ch.pipeline().addLast(proxyHandler);
                 }
             }
         };
@@ -76,23 +65,32 @@ public class DirectServerConnector implements ServerConnector {
     }
 
     @Override
-    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, Queue<Supplier<ProxyHandler>> upstreamProxyChain) {
-        if (upstreamProxyChain == null || upstreamProxyChain.isEmpty()) {
+    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, List<ProxyInfo> upstreamProxies) {
+        if (upstreamProxies == null || upstreamProxies.isEmpty()) {
             return channel(socketAddress, ctx);
         } else {
             EventLoop eventLoop = ctx.channel().eventLoop();
             Bootstrap bootstrap = bootstrap().clone(eventLoop);
-            CompleteChannelPromise promise = new CompleteChannelPromise(eventLoop);
-            channelPromise(socketAddress, upstreamProxyChain, bootstrap, promise);
-            return promise;
+
+            if (upstreamProxies.size() == 1) {
+                ProxyInfo proxyInfo = upstreamProxies.get(0);
+                ProxyHandler proxyHandler = proxyInfo.newProxyHandler();
+                ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
+                return bootstrap.handler(initHandler).connect(socketAddress);
+            } else {
+                CompleteChannelPromise promise = new CompleteChannelPromise(eventLoop);
+                channelPromise(socketAddress, upstreamProxies.iterator(), bootstrap, promise);
+                return promise;
+            }
         }
     }
 
     protected void channelPromise(InetSocketAddress socketAddress,
-                                  Queue<Supplier<ProxyHandler>> proxiesChain,
+                                  Iterator<ProxyInfo> upstreamProxies,
                                   Bootstrap bootstrap,
                                   CompleteChannelPromise promise) {
-        Supplier<ProxyHandler> proxyHandler = proxiesChain.poll();
+        ProxyInfo proxyInfo = upstreamProxies.next();
+        ProxyHandler proxyHandler = proxyInfo.newProxyHandler();
         ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
         bootstrap.handler(initHandler).connect(socketAddress).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
@@ -100,18 +98,13 @@ public class DirectServerConnector implements ServerConnector {
             } else {
                 Throwable cause = future.cause();
                 logger.warn("Connection failed.", cause);
-                if (proxiesChain.isEmpty()) {
-                    promise.setFailure(cause);
+                if (upstreamProxies.hasNext()) {
+                    channelPromise(socketAddress, upstreamProxies, bootstrap, promise);
                 } else {
-                    channelPromise(socketAddress, proxiesChain, bootstrap, promise);
+                    promise.setFailure(cause);
                 }
             }
         });
-    }
-
-    @Override
-    public void switchUpstreamProxy(Supplier<ProxyHandler> upstreamProxy) {
-        setUpstreamProxySupplier(upstreamProxy);
     }
 
     /*
@@ -129,12 +122,4 @@ public class DirectServerConnector implements ServerConnector {
         return this;
     }
 
-    public Supplier<ProxyHandler> getUpstreamProxySupplier() {
-        return upstreamProxySupplier;
-    }
-
-    public DirectServerConnector setUpstreamProxySupplier(Supplier<ProxyHandler> upstreamProxySupplier) {
-        this.upstreamProxySupplier = upstreamProxySupplier;
-        return this;
-    }
 }

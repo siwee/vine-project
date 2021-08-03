@@ -103,9 +103,4 @@ public abstract class HttpConnectHandler extends ConnectHandler<HttpRequest> {
             }
         }
     }
-
-    @Override
-    protected UpstreamProxyManager<HttpRequest> getChainedProxyManager() {
-        return petty.getHttpChainedProxyManager();
-    }
 }

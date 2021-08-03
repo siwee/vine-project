@@ -9,8 +9,7 @@ import io.netty.handler.proxy.ProxyHandler;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
-import java.util.Queue;
-import java.util.function.Supplier;
+import java.util.List;
 
 /**
  * @author aomsweet
@@ -29,10 +28,15 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
         try {
             InetSocketAddress serverAddress = getServerAddress(request);
             ServerConnector connector = petty.getConnector();
-            Queue<Supplier<ProxyHandler>> chainedProxies = chainedProxies(request, clientChannel, serverAddress);
-            ChannelFuture channelFuture = chainedProxies == null
+            UpstreamProxyManager upstreamProxyManager = petty.getUpstreamProxyManager();
+            List<ProxyInfo> proxyHandlers = null;
+            if (upstreamProxyManager != null) {
+                proxyHandlers = upstreamProxyManager.lookupUpstreamProxies(request, getCredentials(request),
+                    clientChannel.remoteAddress(), serverAddress);
+            }
+            ChannelFuture channelFuture = proxyHandlers == null
                 ? connector.channel(serverAddress, ctx)
-                : connector.channel(serverAddress, ctx, chainedProxies);
+                : connector.channel(serverAddress, ctx, proxyHandlers);
             channelFuture.addListener(future -> {
                 if (future.isSuccess()) {
                     Channel serverChannel = channelFuture.channel();
@@ -49,21 +53,12 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
         } catch (ResolveServerAddressException e) {
             logger.error("Unable to get remote address.", e);
             release(ctx.channel(), null);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    protected Queue<Supplier<ProxyHandler>> chainedProxies(Q request,
-                                                           Channel clientChannel,
-                                                           InetSocketAddress serverAddress) {
-        UpstreamProxyManager<Q> upstreamProxyManager = getChainedProxyManager();
-        return upstreamProxyManager == null ? null
-            : upstreamProxyManager.lookupChainedProxies(request, getCredentials(request),
-            (InetSocketAddress) clientChannel.remoteAddress(), serverAddress);
-    }
-
     protected abstract Credentials getCredentials(Q request);
-
-    protected abstract UpstreamProxyManager<Q> getChainedProxyManager();
 
     protected abstract void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Q request);
 

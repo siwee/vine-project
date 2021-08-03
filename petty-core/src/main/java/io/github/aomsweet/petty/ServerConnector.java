@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.proxy.ProxyHandler;
 
 import java.net.InetSocketAddress;
-import java.util.Queue;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -15,8 +15,6 @@ public interface ServerConnector {
 
     ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx);
 
-    ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, Queue<Supplier<ProxyHandler>> upstreamProxyChain);
-
-    void switchUpstreamProxy(Supplier<ProxyHandler> upstreamProxySupplier);
+    ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, List<ProxyInfo> upstreamProxies);
 
 }

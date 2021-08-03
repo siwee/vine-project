@@ -5,15 +5,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.socksx.v4.Socks4CommandRequest;
-import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.proxy.HttpProxyHandler;
-import io.netty.handler.proxy.ProxyHandler;
-import io.netty.handler.proxy.Socks4ProxyHandler;
-import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -23,7 +16,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 /**
  * @author aomsweet
@@ -32,9 +24,7 @@ public class PettyServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(PettyServer.class);
 
-    UpstreamProxyManager<HttpRequest> httpUpstreamProxyManager;
-    UpstreamProxyManager<Socks4CommandRequest> socks4UpstreamProxyManager;
-    UpstreamProxyManager<Socks5CommandRequest> socks5UpstreamProxyManager;
+    UpstreamProxyManager upstreamProxyManager;
     MitmManager mitmManager;
     SslContext clientSslContext;
     ServerConnector connector;
@@ -186,30 +176,12 @@ public class PettyServer implements Closeable {
     #####################################################################################
      */
 
-    public UpstreamProxyManager<HttpRequest> getHttpChainedProxyManager() {
-        return httpUpstreamProxyManager;
+    public UpstreamProxyManager getUpstreamProxyManager() {
+        return upstreamProxyManager;
     }
 
-    public PettyServer setHttpChainedProxyManager(UpstreamProxyManager<HttpRequest> httpUpstreamProxyManager) {
-        this.httpUpstreamProxyManager = httpUpstreamProxyManager;
-        return this;
-    }
-
-    public UpstreamProxyManager<Socks4CommandRequest> getSocks4ChainedProxyManager() {
-        return socks4UpstreamProxyManager;
-    }
-
-    public PettyServer setSocks4ChainedProxyManager(UpstreamProxyManager<Socks4CommandRequest> socks4UpstreamProxyManager) {
-        this.socks4UpstreamProxyManager = socks4UpstreamProxyManager;
-        return this;
-    }
-
-    public UpstreamProxyManager<Socks5CommandRequest> getSocks5ChainedProxyManager() {
-        return socks5UpstreamProxyManager;
-    }
-
-    public PettyServer setSocks5ChainedProxyManager(UpstreamProxyManager<Socks5CommandRequest> socks5UpstreamProxyManager) {
-        this.socks5UpstreamProxyManager = socks5UpstreamProxyManager;
+    public PettyServer setUpstreamProxyManager(UpstreamProxyManager upstreamProxyManager) {
+        this.upstreamProxyManager = upstreamProxyManager;
         return this;
     }
 
@@ -327,7 +299,6 @@ public class PettyServer implements Closeable {
     public static class Builder {
 
         PettyServer petty;
-        Supplier<ProxyHandler> proxyHandler;
 
         public Builder() {
             petty = new PettyServer();
@@ -343,64 +314,21 @@ public class PettyServer implements Closeable {
             if (petty.connector == null) {
                 petty.connector = new DirectServerConnector();
             }
-            if (proxyHandler != null) {
-                petty.connector.switchUpstreamProxy(proxyHandler);
-            }
             if (petty.preBoundAddress == null) {
                 petty.preBoundAddress = new InetSocketAddress("127.0.0.1", 2228);
             }
             return petty;
         }
 
-        public Builder withHttpChainedProxyManager(UpstreamProxyManager<HttpRequest> httpUpstreamProxyManager) {
-            petty.httpUpstreamProxyManager = httpUpstreamProxyManager;
+        public Builder withUpstreamProxyManager(UpstreamProxyManager upstreamProxyManager) {
+            petty.upstreamProxyManager = upstreamProxyManager;
             return this;
         }
-
-        public Builder withSocks4ChainedProxyManager(UpstreamProxyManager<Socks4CommandRequest> socks4UpstreamProxyManager) {
-            petty.socks4UpstreamProxyManager = socks4UpstreamProxyManager;
-            return this;
-        }
-
-        public Builder withSocks5ChainedProxyManager(UpstreamProxyManager<Socks5CommandRequest> socks5UpstreamProxyManager) {
-            petty.socks5UpstreamProxyManager = socks5UpstreamProxyManager;
-            return this;
-        }
-
 
         public Builder withMitmManager(MitmManager mitmManager) {
             petty.mitmManager = mitmManager;
             return this;
         }
-
-        public Builder withUpstreamProxy(Supplier<ProxyHandler> proxyHandler) {
-            this.proxyHandler = proxyHandler;
-            return this;
-        }
-
-        public Builder withUpstreamProxy(ProxyType type, String host, int port) {
-            return withUpstreamProxy(type, host, port, null, null);
-        }
-
-        public Builder withUpstreamProxy(ProxyType type, String host, int port, String username, String password) {
-            Supplier<ProxyHandler> proxyHandler;
-            switch (type) {
-                case SOCKS5:
-                    proxyHandler = () -> new Socks5ProxyHandler(new InetSocketAddress(host, port), username, password);
-                    break;
-                case SOCKS4a:
-                    proxyHandler = () -> new Socks4ProxyHandler(new InetSocketAddress(host, port));
-                    break;
-                case HTTP:
-                    proxyHandler = () -> new HttpProxyHandler(new InetSocketAddress(host, port), username, password);
-                    break;
-                default:
-                    throw new RuntimeException("UnKnow proxy type.");
-            }
-            this.proxyHandler = proxyHandler;
-            return this;
-        }
-
 
         public Builder withClientSslContext(SslContext clientSslContext) {
             petty.clientSslContext = clientSslContext;
