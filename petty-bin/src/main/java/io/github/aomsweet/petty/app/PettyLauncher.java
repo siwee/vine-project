@@ -69,7 +69,7 @@ public class PettyLauncher {
         AnsiConsoleAppender<ILoggingEvent> consoleAppender = ((AnsiConsoleAppender<ILoggingEvent>) rootLogger
             .getAppender(AnsiConsoleAppender.DEFAULT_NAME));
 
-        String pattern = "%d{yyyy-MM-dd HH:mm:ss:SSS} | %highlight(%-5level) %green([%thread]) %boldMagenta(%logger{36}) - %cyan(%msg) %n%red(%ex)";
+        String pattern = "%d{yyyy-MM-dd HH:mm:ss:SSS} | %highlight(%-5level) %green([%thread]) %boldMagenta(%logger{36}) - %cyan(%msg) %n%boldRed(%ex)";
 
         PatternLayout layout = new PatternLayout();
         layout.setPattern(pattern);
