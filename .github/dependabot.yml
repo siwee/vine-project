@@ -1,0 +1,20 @@
+version: 2
+updates:
+    -   package-ecosystem: maven
+        directory: "/"
+        schedule:
+            interval: daily
+            time: "9:00"
+            timezone: GMT+8
+        open-pull-requests-limit: 10
+        labels:
+            - area/dependencies
+        allow:
+            -   dependency-name: io.netty:netty-bom
+            -   dependency-name: org.bouncycastle:bcpkix-jdk15on
+            -   dependency-name: org.fusesource.jansi:jansi
+            -   dependency-name: ch.qos.logback:logback-classic
+            -   dependency-name: org.junit.jupiter:junit-jupiter-engine
+            -   dependency-name: org.graalvm.sdk:graal-sdk
+            -   dependency-name: org.graalvm.nativeimage:svm
+        rebase-strategy: disabled
