@@ -5,7 +5,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
@@ -71,9 +70,6 @@ public abstract class ConnectHandler<Q> extends ChannelInboundHandlerAdapter {
             if (serverChannel.isActive()) {
                 clientChannel.pipeline().addLast(new ClientRelayHandler(serverChannel));
                 serverChannel.pipeline().addLast(new ServerRelayHandler(clientChannel));
-
-                System.err.println("clientChannel channel: " + clientChannel.pipeline());
-                System.err.println("serverChannel channel: " + serverChannel.pipeline());
                 return true;
             } else {
                 ChannelUtils.closeOnFlush(clientChannel);
