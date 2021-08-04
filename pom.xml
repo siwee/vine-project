@@ -25,7 +25,7 @@
 
         <netty.version>4.1.66.Final</netty.version>
         <bouncycastle.version>1.69</bouncycastle.version>
-        <logback.version>1.2.3</logback.version>
+        <logback.version>1.2.5</logback.version>
         <jansi.version>2.3.3</jansi.version>
         <lombok.version>1.18.20</lombok.version>
         <junit.version>5.7.2</junit.version>
