@@ -51,7 +51,8 @@ public class SelfSignedMitmManager implements MitmManager {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         this.issuerCertificate = (X509Certificate) cf.generateCertificate(certInputStream);
 
-        byte[] bytes = keyInputStream.readAllBytes();
+        byte[] bytes = new byte[keyInputStream.available()];
+        keyInputStream.read(bytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(bytes);
         this.issuerPrivateKey = keyFactory.generatePrivate(privateKeySpec);

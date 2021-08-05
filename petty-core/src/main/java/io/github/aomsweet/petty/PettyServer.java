@@ -66,7 +66,7 @@ public class PettyServer implements Closeable {
             bootstrap.handler(new LoggingHandler(LogLevel.TRACE));
         }
         PortUnificationServerHandler unificationServerHandler = new PortUnificationServerHandler(this);
-        bootstrap.childHandler(new ChannelInitializer<>() {
+        bootstrap.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();

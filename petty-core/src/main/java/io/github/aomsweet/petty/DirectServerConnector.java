@@ -46,7 +46,7 @@ public class DirectServerConnector implements ServerConnector {
     }
 
     public ChannelInitializer<Channel> channelInitializer(ProxyHandler proxyHandler) {
-        return new ChannelInitializer<>() {
+        return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 if (logger.isTraceEnabled()) {
