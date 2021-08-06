@@ -1,5 +1,6 @@
 package io.github.aomsweet.petty.http;
 
+import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.http.mitm.HttpMitmConnectHandler;
 import io.github.aomsweet.petty.http.mitm.HttpsMitmConnectHandler;
@@ -28,12 +29,12 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> 
         } else {
             if (HttpMethod.CONNECT.equals(httpRequest.method())) {
                 if (petty.getMitmManager() == null) {
-                    ctx.pipeline().addLast(new HttpTunnelDuplexConnectHandler(petty));
+                    ctx.pipeline().addLast(HandlerNames.CONNECT, new HttpTunnelDuplexConnectHandler(petty));
                 } else {
-                    ctx.pipeline().addLast(new HttpsMitmConnectHandler(petty));
+                    ctx.pipeline().addLast(HandlerNames.CONNECT, new HttpsMitmConnectHandler(petty));
                 }
             } else {
-                ctx.pipeline().addLast(new HttpMitmConnectHandler(petty));
+                ctx.pipeline().addLast(HandlerNames.CONNECT, new HttpMitmConnectHandler(petty));
             }
             ctx.fireChannelRead(httpRequest).pipeline().remove(this);
         }

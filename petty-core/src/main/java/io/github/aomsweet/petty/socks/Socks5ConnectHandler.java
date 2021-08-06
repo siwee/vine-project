@@ -49,14 +49,13 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     }
 
     protected void initialRequestHandler(ChannelHandlerContext ctx, Socks5InitialRequest initialRequest, ChannelPipeline pipeline) {
-        pipeline.remove(Socks5InitialRequestDecoder.class);
         Object response;
         if (petty.getProxyAuthenticator() != null ||
             initialRequest.authMethods().contains(Socks5AuthMethod.PASSWORD)) {
-            pipeline.addFirst(new Socks5PasswordAuthRequestDecoder());
+            pipeline.replace(HandlerNames.DECODER, HandlerNames.DECODER, new Socks5PasswordAuthRequestDecoder());
             response = PASSWORD_RESPONSE;
         } else {
-            pipeline.addFirst(new Socks5CommandRequestDecoder());
+            pipeline.replace(HandlerNames.DECODER, HandlerNames.DECODER, new Socks5CommandRequestDecoder());
             response = NO_AUTH_RESPONSE;
         }
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
@@ -70,8 +69,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
         }
         ProxyAuthenticator proxyAuthenticator = petty.getProxyAuthenticator();
         if (proxyAuthenticator == null || proxyAuthenticator.authenticate(username, password)) {
-            pipeline.remove(Socks5PasswordAuthRequestDecoder.class);
-            pipeline.addFirst(new Socks5CommandRequestDecoder());
+            pipeline.replace(HandlerNames.DECODER, HandlerNames.DECODER, new Socks5CommandRequestDecoder());
             ctx.writeAndFlush(AUTH_SUCCESS).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         } else {
             ctx.writeAndFlush(AUTH_FAILURE).addListener(ChannelFutureListener.CLOSE);
@@ -79,7 +77,7 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
     }
 
     protected void cmdRequestHandler(ChannelHandlerContext ctx, Socks5CommandRequest socks5CmdRequest, ChannelPipeline pipeline) {
-        pipeline.remove(Socks5CommandRequestDecoder.class);
+        pipeline.remove(HandlerNames.DECODER);
         if (socks5CmdRequest.type() == Socks5CommandType.CONNECT) {
             doConnectServer(ctx, ctx.channel(), socks5CmdRequest);
         } else {
@@ -100,8 +98,8 @@ public final class Socks5ConnectHandler extends ConnectHandler<Socks5CommandRequ
             request.dstAddrType(), request.dstAddr(), request.dstPort());
         clientChannel.writeAndFlush(response).addListener(future -> {
             if (future.isSuccess()) {
-                ctx.pipeline().remove(Socks5ServerEncoder.class);
-                ctx.pipeline().remove(Socks5ConnectHandler.this);
+                ctx.pipeline().remove(HandlerNames.ENCODER);
+                ctx.pipeline().remove(this);
                 relayDucking(clientChannel, serverChannel);
             } else {
                 release(clientChannel, serverChannel);

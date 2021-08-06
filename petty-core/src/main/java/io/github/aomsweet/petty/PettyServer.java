@@ -71,9 +71,9 @@ public class PettyServer implements Closeable {
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
                 if (logger.isTraceEnabled()) {
-                    pipeline.addLast(new LoggingHandler(LogLevel.TRACE));
+                    pipeline.addLast(HandlerNames.LOGGING, new LoggingHandler(LogLevel.TRACE));
                 }
-                pipeline.addLast(unificationServerHandler);
+                pipeline.addLast(HandlerNames.ROOT, unificationServerHandler);
             }
         });
         CompletableFuture<Channel> channelFuture = new CompletableFuture<>();

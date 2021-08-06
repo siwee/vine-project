@@ -1,5 +1,6 @@
 package io.github.aomsweet.petty.http.mitm;
 
+import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.github.aomsweet.petty.http.HttpConnectHandler;
@@ -71,10 +72,10 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
             ChannelPipeline pipeline = serverChannel.pipeline();
             if (isSsl) {
                 SslContext clientSslContext = getClientSslContext();
-                pipeline.addLast(clientSslContext.newHandler(serverChannel.alloc(),
+                pipeline.addLast(HandlerNames.SSL, clientSslContext.newHandler(serverChannel.alloc(),
                     serverAddress.getHostName(), serverAddress.getPort()));
             }
-            pipeline.addLast(new HttpRequestEncoder());
+            pipeline.addLast(HandlerNames.ENCODER, new HttpRequestEncoder());
             doRelayDucking(ctx, request);
         } catch (SSLException e) {
             release(clientChannel, serverChannel);

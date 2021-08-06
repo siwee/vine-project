@@ -1,9 +1,9 @@
 package io.github.aomsweet.petty.socks;
 
-import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.UpstreamProxyManager;
 import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.ConnectHandler;
+import io.github.aomsweet.petty.HandlerNames;
+import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -52,7 +52,7 @@ public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequ
     protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks4CommandRequest request) {
         clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
             if (future.isSuccess()) {
-                clientChannel.pipeline().remove(Socks4ServerDecoder.class);
+                clientChannel.pipeline().remove(HandlerNames.DECODER);
                 clientChannel.pipeline().remove(Socks4ServerEncoder.INSTANCE);
                 clientChannel.pipeline().remove(this);
                 relayDucking(clientChannel, serverChannel);

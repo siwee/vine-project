@@ -52,20 +52,20 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
             final byte version = in.getByte(readerIndex);
             if (version == 4) {
                 logKnownVersion(ctx, version);
-                pipeline.addLast(new Socks4ServerDecoder());
-                pipeline.addLast(Socks4ServerEncoder.INSTANCE);
-                pipeline.addLast(socks4ConnectHandler);
+                pipeline.addLast(HandlerNames.DECODER, new Socks4ServerDecoder());
+                pipeline.addLast(HandlerNames.ENCODER, Socks4ServerEncoder.INSTANCE);
+                pipeline.addLast(HandlerNames.CONNECT, socks4ConnectHandler);
             } else if (version == 5) {
                 logKnownVersion(ctx, version);
-                pipeline.addLast(new Socks5InitialRequestDecoder());
-                pipeline.addLast(Socks5ServerEncoder.DEFAULT);
+                pipeline.addLast(HandlerNames.DECODER, new Socks5InitialRequestDecoder());
+                pipeline.addLast(HandlerNames.ENCODER, Socks5ServerEncoder.DEFAULT);
                 if (petty.getUpstreamProxyManager() == null) {
-                    pipeline.addLast(socks5ConnectHandler);
+                    pipeline.addLast(HandlerNames.CONNECT, socks5ConnectHandler);
                 } else {
-                    pipeline.addLast(new Socks5ConnectHandler(petty, true));
+                    pipeline.addLast(HandlerNames.CONNECT, new Socks5ConnectHandler(petty, true));
                 }
             } else {
-                pipeline.addLast(new HttpRequestDecoder());
+                pipeline.addLast(HandlerNames.DECODER, new HttpRequestDecoder());
                 pipeline.addLast(httpServerHandler);
             }
             pipeline.fireChannelRead(msg);

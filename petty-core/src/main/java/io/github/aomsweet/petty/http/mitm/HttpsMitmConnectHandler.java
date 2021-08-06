@@ -1,5 +1,6 @@
 package io.github.aomsweet.petty.http.mitm;
 
+import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ChannelUtils;
 import io.netty.buffer.ByteBuf;
@@ -37,7 +38,7 @@ public class HttpsMitmConnectHandler extends MitmConnectHandler {
             String host = serverAddress.getHostName();
             MitmManager mitmManager = petty.getMitmManager();
             SslContext sslContext = mitmManager.serverSslContext(host);
-            ctx.pipeline().addFirst(sslContext.newHandler(ctx.alloc()));
+            ctx.pipeline().addFirst(HandlerNames.SSL, sslContext.newHandler(ctx.alloc()));
 
             doConnectServer(ctx, ctx.channel(), request);
         } else {
