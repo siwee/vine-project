@@ -2,7 +2,7 @@ package io.github.aomsweet.petty.http.mitm;
 
 import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ChannelUtils;
-import io.github.aomsweet.petty.RelayHandler;
+import io.github.aomsweet.petty.ConnectionHandler;
 import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -16,11 +16,11 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public class HttpMitmConnectHandler extends MitmConnectHandler {
+public class HttpMitmClientConnectionHandler extends MitmClientConnectionHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmClientConnectionHandler.class);
 
-    public HttpMitmConnectHandler(PettyServer petty) {
+    public HttpMitmClientConnectionHandler(PettyServer petty) {
         super(petty, logger);
     }
 
@@ -34,8 +34,8 @@ public class HttpMitmConnectHandler extends MitmConnectHandler {
             ctx.fireChannelRead(request);
         } else {
             this.serverAddress = serverAddress;
-            clientChannel.pipeline().remove(RelayHandler.class);
-            serverChannel.pipeline().remove(RelayHandler.class);
+            clientChannel.pipeline().remove(ConnectionHandler.class);
+            serverChannel.pipeline().remove(ConnectionHandler.class);
             ChannelUtils.closeOnFlush(serverChannel);
             serverChannel = null;
             doConnectServer(ctx, ctx.channel(), request);

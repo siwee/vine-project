@@ -17,13 +17,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class HttpsMitmConnectHandler extends MitmConnectHandler {
+public class HttpsMitmClientConnectionHandler extends MitmClientConnectionHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmClientConnectionHandler.class);
 
     boolean sslHandshakeCompleted;
 
-    public HttpsMitmConnectHandler(PettyServer petty) {
+    public HttpsMitmClientConnectionHandler(PettyServer petty) {
         super(petty, logger);
         this.isSsl = true;
     }

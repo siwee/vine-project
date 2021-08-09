@@ -21,15 +21,15 @@ import java.net.InetSocketAddress;
  * @author aomsweet
  */
 @ChannelHandler.Sharable
-public class HttpTunnelConnectHandler extends HttpConnectHandler {
+public class HttpTunnelClientConnectionHandler extends HttpClientConnectionHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelClientConnectionHandler.class);
 
-    public HttpTunnelConnectHandler(PettyServer petty) {
+    public HttpTunnelClientConnectionHandler(PettyServer petty) {
         super(petty, logger);
     }
 
-    public HttpTunnelConnectHandler(PettyServer petty, InternalLogger logger) {
+    public HttpTunnelClientConnectionHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
     }
 
@@ -50,27 +50,21 @@ public class HttpTunnelConnectHandler extends HttpConnectHandler {
     }
 
     @Override
-    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
+    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         ChannelPipeline clientPipeline = clientChannel.pipeline();
-        clientPipeline.remove(this);
         clientPipeline.remove(HandlerNames.DECODER);
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
         ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE)).addListener(future -> {
             if (future.isSuccess()) {
-                relayDucking(clientChannel, serverChannel);
+                status = Status.CONNECTED;
             } else {
-                release(clientChannel, serverChannel);
+                release(ctx);
             }
         });
     }
 
     @Override
-    protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
+    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         ChannelUtils.closeOnFlush(clientChannel);
-    }
-
-    @Override
-    protected InetSocketAddress getServerAddress(HttpRequest request) throws ResolveServerAddressException {
-        return resolveServerAddress(request);
     }
 }

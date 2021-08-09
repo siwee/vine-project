@@ -18,17 +18,17 @@ import java.util.Base64;
 /**
  * @author aomsweet
  */
-public abstract class HttpConnectHandler extends ConnectHandler<HttpRequest> {
+public abstract class HttpClientConnectionHandler extends ClientConnectionHandler<HttpRequest> {
 
     public static final byte[] UNAUTHORIZED_RESPONSE = "HTTP/1.1 407 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Access to the staging site\"\r\n\r\n".getBytes();
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
-    public HttpConnectHandler(PettyServer petty, InternalLogger logger) {
+    public HttpClientConnectionHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest httpRequest = (HttpRequest) msg;
             if (httpRequest.decoderResult().isSuccess()) {
@@ -56,16 +56,6 @@ public abstract class HttpConnectHandler extends ConnectHandler<HttpRequest> {
         ctx.fireChannelRead(message);
     }
 
-    public InetSocketAddress resolveServerAddress(HttpRequest httpRequest) throws ResolveServerAddressException {
-        try {
-            String uri = httpRequest.uri();
-            int index = uri.indexOf(':');
-            return InetSocketAddress.createUnresolved(uri.substring(0, index), Integer.parseInt(uri.substring(index + 1)));
-        } catch (Exception e) {
-            throw new ResolveServerAddressException(getHttpRequestInitialLine(httpRequest), e);
-        }
-    }
-
     public String getHttpRequestInitialLine(HttpRequest httpRequest) {
         return httpRequest.method().name() + ' ' + httpRequest.uri() + ' ' + httpRequest.protocolVersion();
     }
@@ -84,8 +74,17 @@ public abstract class HttpConnectHandler extends ConnectHandler<HttpRequest> {
         return ctx.writeAndFlush(byteBuf.writeBytes(response));
     }
 
-    @Override
-    protected Credentials getCredentials(HttpRequest request) {
+    public InetSocketAddress resolveServerAddress(HttpRequest httpRequest) throws ResolveServerAddressException {
+        try {
+            String uri = httpRequest.uri();
+            int index = uri.indexOf(':');
+            return InetSocketAddress.createUnresolved(uri.substring(0, index), Integer.parseInt(uri.substring(index + 1)));
+        } catch (Exception e) {
+            throw new ResolveServerAddressException(getHttpRequestInitialLine(httpRequest), e);
+        }
+    }
+
+    protected Credentials resolveCredentials(HttpRequest request) {
         HttpHeaders headers = request.headers();
         String authorization = headers.get(HttpHeaderNames.PROXY_AUTHORIZATION);
         if (authorization == null || authorization.isEmpty()) {

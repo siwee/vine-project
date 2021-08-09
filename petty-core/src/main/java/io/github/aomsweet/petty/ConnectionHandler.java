@@ -12,19 +12,22 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * @author aomsweet
  */
-public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
+public abstract class ConnectionHandler extends ChannelInboundHandlerAdapter {
 
-    Channel relayChannel;
-    InternalLogger logger;
+    protected final InternalLogger logger;
+    protected final PettyServer petty;
 
-    public RelayHandler(Channel relayChannel, InternalLogger logger) {
-        this.relayChannel = relayChannel;
+    protected Status status;
+    protected Channel relayChannel;
+
+    public ConnectionHandler(PettyServer petty, InternalLogger logger) {
+        this.petty = petty;
         this.logger = logger;
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (relayChannel.isActive()) {
+        if (relayChannel != null && relayChannel.isActive()) {
             if (logger.isDebugEnabled()) {
                 logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
             }
@@ -34,19 +37,19 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (relayChannel.isActive()) {
-            relayChannel.writeAndFlush(msg);
+        if (status == Status.CONNECTED) {
+            if (relayChannel.isActive()) {
+                relayChannel.writeAndFlush(msg);
+            } else {
+                ReferenceCountUtil.release(msg);
+                release(ctx);
+            }
         } else {
-            ReferenceCountUtil.release(msg);
-            ChannelUtils.closeOnFlush(relayChannel);
-            ctx.close();
+            channelRead0(ctx, msg);
         }
     }
 
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        super.userEventTriggered(ctx, evt);
-    }
+    public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
@@ -57,6 +60,13 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
                 isWritable ? "ENABLE AUTO READ" : "DISABLE AUTO READ");
         }
         relayChannel.config().setAutoRead(isWritable);
+    }
+
+    public void release(ChannelHandlerContext ctx) {
+        ctx.close();
+        if (relayChannel != null && relayChannel.isActive()) {
+            ChannelUtils.closeOnFlush(relayChannel);
+        }
     }
 
     @Override
@@ -74,6 +84,12 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         } finally {
             ctx.close();
         }
+    }
+
+    public enum Status {
+
+        UNCONNECTED, CONNECTED
+
     }
 
 }

@@ -1,7 +1,7 @@
 package io.github.aomsweet.petty.http.mitm;
 
 import io.github.aomsweet.petty.*;
-import io.github.aomsweet.petty.http.HttpConnectHandler;
+import io.github.aomsweet.petty.http.HttpClientConnectionHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -21,7 +21,7 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public abstract class MitmConnectHandler extends HttpConnectHandler {
+public abstract class MitmClientConnectionHandler extends HttpClientConnectionHandler {
 
     boolean isSsl;
     boolean connected;
@@ -32,7 +32,7 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     InetSocketAddress serverAddress;
     Queue<Object> queue;
 
-    public MitmConnectHandler(PettyServer petty, InternalLogger logger) {
+    public MitmClientConnectionHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
         this.queue = new ArrayDeque<>(4);
     }
@@ -63,7 +63,7 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     }
 
     @Override
-    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
+    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
         this.connected = true;
         this.serverChannel = serverChannel;
         try {
@@ -84,8 +84,8 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     public boolean relayDucking(Channel clientChannel, Channel serverChannel) {
         if (clientChannel.isActive()) {
             if (serverChannel.isActive()) {
-                clientChannel.pipeline().addLast(new ClientRelayHandler(serverChannel));
-                serverChannel.pipeline().addLast(new ServerRelayHandler(clientChannel));
+                clientChannel.pipeline().addLast(new ClientConnectionHandler(serverChannel));
+                serverChannel.pipeline().addLast(new ServerConnectionHandler(clientChannel));
                 return true;
             } else {
                 ChannelUtils.closeOnFlush(clientChannel);
@@ -99,7 +99,7 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
     protected abstract void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request);
 
     @Override
-    protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
+    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         release(clientChannel, null);
     }
 

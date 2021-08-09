@@ -2,7 +2,6 @@ package io.github.aomsweet.petty.http;
 
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,21 +12,19 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.InetSocketAddress;
-
 /**
  * @author aomsweet
  */
-public class HttpTunnelDuplexConnectHandler extends HttpConnectHandler {
+public class HttpTunnelDuplexClientConnectionHandler extends HttpClientConnectionHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelDuplexConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelDuplexClientConnectionHandler.class);
 
     /**
      * tls client hello request
      */
     Object clientHello;
 
-    public HttpTunnelDuplexConnectHandler(PettyServer petty) {
+    public HttpTunnelDuplexClientConnectionHandler(PettyServer petty) {
         super(petty, logger);
     }
 
@@ -54,7 +51,7 @@ public class HttpTunnelDuplexConnectHandler extends HttpConnectHandler {
     }
 
     @Override
-    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, HttpRequest request) {
+    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         ChannelPipeline clientPipeline = clientChannel.pipeline().remove(this);
         if (relayDucking(clientChannel, serverChannel)) {
             if (clientHello != null) {
@@ -64,18 +61,13 @@ public class HttpTunnelDuplexConnectHandler extends HttpConnectHandler {
     }
 
     @Override
-    protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        release(clientChannel, null);
+    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
+        release(ctx);
     }
 
     @Override
-    protected InetSocketAddress getServerAddress(HttpRequest request) throws ResolveServerAddressException {
-        return resolveServerAddress(request);
-    }
-
-    @Override
-    public void release(Channel clientChannel, Channel serverChannel) {
-        super.release(clientChannel, serverChannel);
+    public void release(ChannelHandlerContext ctx) {
+        super.release(ctx);
         if (clientHello != null) {
             ReferenceCountUtil.release(clientHello);
         }

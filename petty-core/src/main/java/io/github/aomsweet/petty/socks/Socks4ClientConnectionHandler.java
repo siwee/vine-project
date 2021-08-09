@@ -1,74 +1,63 @@
 package io.github.aomsweet.petty.socks;
 
 import io.github.aomsweet.petty.ChannelUtils;
-import io.github.aomsweet.petty.ConnectHandler;
+import io.github.aomsweet.petty.ClientConnectionHandler;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.socksx.v4.*;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
 @ChannelHandler.Sharable
-public final class Socks4ConnectHandler extends ConnectHandler<Socks4CommandRequest> {
+public final class Socks4ClientConnectionHandler extends ClientConnectionHandler<Socks4CommandRequest> {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ConnectHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ClientConnectionHandler.class);
 
     public static final DefaultSocks4CommandResponse SUCCESS_RESPONSE = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
     public static final DefaultSocks4CommandResponse REJECTED_OR_FAILED_RESPONSE = new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED);
 
-    public Socks4ConnectHandler(PettyServer petty) {
+    public Socks4ClientConnectionHandler(PettyServer petty) {
         super(petty, logger);
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof Socks4CommandRequest) {
             Socks4CommandRequest request = (Socks4CommandRequest) msg;
             if (request.type() == Socks4CommandType.CONNECT) {
+                serverAddress = InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
                 doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
             } else {
                 logger.error("Unsupported Socks4 {} command.", request.type());
                 ctx.close();
             }
         } else {
-            ReferenceCountUtil.release(msg);
-            ctx.close();
+            ctx.fireChannelRead(msg);
         }
     }
 
     @Override
-    protected Credentials getCredentials(Socks4CommandRequest request) {
-        return null;
-    }
-
-    @Override
-    protected void connected(ChannelHandlerContext ctx, Channel clientChannel, Channel serverChannel, Socks4CommandRequest request) {
+    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
         clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
             if (future.isSuccess()) {
                 clientChannel.pipeline().remove(HandlerNames.DECODER);
                 clientChannel.pipeline().remove(Socks4ServerEncoder.INSTANCE);
-                clientChannel.pipeline().remove(this);
-                relayDucking(clientChannel, serverChannel);
+                if (relayChannel.isActive()) {
+                    status = Status.CONNECTED;
+                }
             } else {
-                release(clientChannel, serverChannel);
+                release(ctx);
             }
         });
     }
 
     @Override
-    protected void failConnect(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
+    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
         ChannelUtils.closeOnFlush(clientChannel, REJECTED_OR_FAILED_RESPONSE);
-    }
-
-    @Override
-    protected InetSocketAddress getServerAddress(Socks4CommandRequest request) {
-        return InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
     }
 }

@@ -1,8 +1,8 @@
 package io.github.aomsweet.petty;
 
 import io.github.aomsweet.petty.http.HttpServerHandler;
-import io.github.aomsweet.petty.socks.Socks4ConnectHandler;
-import io.github.aomsweet.petty.socks.Socks5ConnectHandler;
+import io.github.aomsweet.petty.socks.Socks4ClientConnectionHandler;
+import io.github.aomsweet.petty.socks.Socks5ClientConnectionHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,15 +29,15 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
     PettyServer petty;
     HttpServerHandler httpServerHandler;
 
-    Socks4ConnectHandler socks4ConnectHandler;
-    Socks5ConnectHandler socks5ConnectHandler;
+    Socks4ClientConnectionHandler socks4ConnectHandler;
+    Socks5ClientConnectionHandler socks5ConnectHandler;
 
     public PortUnificationServerHandler(PettyServer petty) {
         this.petty = petty;
         this.httpServerHandler = new HttpServerHandler(petty);
-        this.socks5ConnectHandler = new Socks5ConnectHandler(petty);
+        this.socks5ConnectHandler = new Socks5ClientConnectionHandler(petty);
 
-        this.socks4ConnectHandler = new Socks4ConnectHandler(petty);
+        this.socks4ConnectHandler = new Socks4ClientConnectionHandler(petty);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
                 if (petty.getUpstreamProxyManager() == null) {
                     pipeline.addLast(HandlerNames.CONNECT, socks5ConnectHandler);
                 } else {
-                    pipeline.addLast(HandlerNames.CONNECT, new Socks5ConnectHandler(petty, true));
+                    pipeline.addLast(HandlerNames.CONNECT, new Socks5ClientConnectionHandler(petty, true));
                 }
             } else {
                 pipeline.addLast(HandlerNames.DECODER, new HttpRequestDecoder());
