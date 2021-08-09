@@ -1,5 +1,6 @@
 package io.github.aomsweet.petty;
 
+import io.github.aomsweet.petty.http.HttpInterceptorManager;
 import io.github.aomsweet.petty.http.mitm.MitmManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -24,6 +25,7 @@ public class PettyServer implements Closeable {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(PettyServer.class);
 
+    HttpInterceptorManager httpInterceptorManager;
     UpstreamProxyManager upstreamProxyManager;
     MitmManager mitmManager;
     SslContext clientSslContext;
@@ -176,6 +178,15 @@ public class PettyServer implements Closeable {
     #####################################################################################
      */
 
+    public HttpInterceptorManager getHttpInterceptorManager() {
+        return httpInterceptorManager;
+    }
+
+    public PettyServer setHttpInterceptorManager(HttpInterceptorManager httpInterceptorManager) {
+        this.httpInterceptorManager = httpInterceptorManager;
+        return this;
+    }
+
     public UpstreamProxyManager getUpstreamProxyManager() {
         return upstreamProxyManager;
     }
@@ -318,6 +329,11 @@ public class PettyServer implements Closeable {
                 petty.preBoundAddress = new InetSocketAddress("127.0.0.1", 2228);
             }
             return petty;
+        }
+
+        public Builder withHttpInterceptorManager(HttpInterceptorManager httpInterceptorManager) {
+            petty.httpInterceptorManager = httpInterceptorManager;
+            return this;
         }
 
         public Builder withUpstreamProxyManager(UpstreamProxyManager upstreamProxyManager) {

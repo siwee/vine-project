@@ -1,8 +1,6 @@
 package io.github.aomsweet.petty.http.mitm;
 
-import io.github.aomsweet.petty.HandlerNames;
-import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ResolveServerAddressException;
+import io.github.aomsweet.petty.*;
 import io.github.aomsweet.petty.http.HttpConnectHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -80,6 +78,22 @@ public abstract class MitmConnectHandler extends HttpConnectHandler {
         } catch (SSLException e) {
             release(clientChannel, serverChannel);
         }
+    }
+
+    @Override
+    public boolean relayDucking(Channel clientChannel, Channel serverChannel) {
+        if (clientChannel.isActive()) {
+            if (serverChannel.isActive()) {
+                clientChannel.pipeline().addLast(new ClientRelayHandler(serverChannel));
+                serverChannel.pipeline().addLast(new ServerRelayHandler(clientChannel));
+                return true;
+            } else {
+                ChannelUtils.closeOnFlush(clientChannel);
+            }
+        } else {
+            ChannelUtils.closeOnFlush(serverChannel);
+        }
+        return false;
     }
 
     protected abstract void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request);

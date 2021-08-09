@@ -53,6 +53,20 @@ public abstract class FullHttpRequestInterceptor implements HttpRequestIntercept
 
     }
 
+    @Override
+    public final void afterSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest) throws Exception {
+        if (httpRequest instanceof FullHttpRequest) {
+            afterSend(clientChannel, serverChannel, (FullHttpRequest) httpRequest);
+        }
+    }
+
+    public abstract void afterSend(Channel clientChannel, Channel serverChannel, FullHttpRequest fullHttpRequest) throws Exception;
+
+    @Override
+    public final void afterSend(Channel clientChannel, Channel serverChannel, HttpContent httpContent) throws Exception {
+
+    }
+
     public int getMaxContentLength() {
         return maxContentLength;
     }
