@@ -1,8 +1,8 @@
 package io.github.aomsweet.petty.http.mitm;
 
+import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ChannelUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -17,19 +17,19 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class HttpsMitmClientConnectionHandler extends MitmClientConnectionHandler {
+public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmClientConnectionHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmClientRelayHandler.class);
 
     boolean sslHandshakeCompleted;
 
-    public HttpsMitmClientConnectionHandler(PettyServer petty) {
+    public HttpsMitmClientRelayHandler(PettyServer petty) {
         super(petty, logger);
         this.isSsl = true;
     }
 
     @Override
-    public void handleHttpRequest0(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
         if (HttpMethod.CONNECT.equals(request.method())) {
             this.serverAddress = resolveServerAddress(request);
             ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
@@ -60,28 +60,11 @@ public class HttpsMitmClientConnectionHandler extends MitmClientConnectionHandle
         if (evt instanceof SslHandshakeCompletionEvent) {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
-                tryDucking(ctx);
             } else {
                 ctx.close();
-                if (serverChannel != null) {
-                    ChannelUtils.closeOnFlush(serverChannel);
+                if (relayChannel != null) {
+                    ChannelUtils.closeOnFlush(relayChannel);
                 }
-            }
-        }
-    }
-
-    @Override
-    protected void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request) {
-        tryDucking(ctx);
-    }
-
-    void tryDucking(ChannelHandlerContext ctx) {
-        if (connected && sslHandshakeCompleted) {
-            ctx.pipeline().remove(this);
-            if (relayDucking(clientChannel, serverChannel)) {
-                flush(ctx);
-            } else {
-                release(clientChannel, serverChannel);
             }
         }
     }

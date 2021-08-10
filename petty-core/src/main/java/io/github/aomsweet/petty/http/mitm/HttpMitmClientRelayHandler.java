@@ -1,8 +1,8 @@
 package io.github.aomsweet.petty.http.mitm;
 
-import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ChannelUtils;
-import io.github.aomsweet.petty.ConnectionHandler;
+import io.github.aomsweet.petty.HandlerNames;
+import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -16,48 +16,42 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public class HttpMitmClientConnectionHandler extends MitmClientConnectionHandler {
+public class HttpMitmClientRelayHandler extends MitmClientRelayHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmClientConnectionHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpMitmClientRelayHandler.class);
 
-    public HttpMitmClientConnectionHandler(PettyServer petty) {
+    public HttpMitmClientRelayHandler(PettyServer petty) {
         super(petty, logger);
     }
 
     @Override
-    public void handleHttpRequest0(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        super.channelRead0(ctx, msg);
+    }
+
+    @Override
+    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
         InetSocketAddress serverAddress = resolveServerAddress(request);
         if (this.serverAddress == null) {
             this.serverAddress = serverAddress;
             doConnectServer(ctx, ctx.channel(), request);
         } else if (this.serverAddress.equals(serverAddress)) {
-            ctx.fireChannelRead(request);
+            relay(ctx, request);
         } else {
+            status = Status.UNCONNECTED;
             this.serverAddress = serverAddress;
-            clientChannel.pipeline().remove(ConnectionHandler.class);
-            serverChannel.pipeline().remove(ConnectionHandler.class);
-            ChannelUtils.closeOnFlush(serverChannel);
-            serverChannel = null;
+            relayChannel.pipeline().remove(HandlerNames.RELAY);
+            ChannelUtils.closeOnFlush(relayChannel);
             doConnectServer(ctx, ctx.channel(), request);
         }
     }
 
     @Override
     public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
-        if (connected) {
-            ctx.fireChannelRead(httpContent);
+        if (status == Status.CONNECTED) {
+            relay(ctx, httpContent);
         } else {
             queue.offer(httpContent);
-        }
-    }
-
-    @Override
-    protected void doRelayDucking(ChannelHandlerContext ctx, HttpRequest request) {
-        if (relayDucking(clientChannel, serverChannel)) {
-            ctx.fireChannelRead(request);
-            flush(ctx);
-        } else {
-            release(clientChannel, serverChannel);
         }
     }
 

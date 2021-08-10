@@ -12,14 +12,26 @@ import java.util.List;
 /**
  * @author aomsweet
  */
-public abstract class ClientConnectionHandler<Q> extends ConnectionHandler {
+public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
+    protected Status status;
     protected Credentials credentials;
     protected InetSocketAddress serverAddress;
 
-    public ClientConnectionHandler(PettyServer petty, InternalLogger logger) {
+    public ClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
     }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (status == Status.CONNECTED) {
+            relay(ctx, msg);
+        } else {
+            channelRead0(ctx, msg);
+        }
+    }
+
+    public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
 
     protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) {
         try {
@@ -55,8 +67,23 @@ public abstract class ClientConnectionHandler<Q> extends ConnectionHandler {
         }
     }
 
+    public void addServerRelayHandler(ChannelHandlerContext ctx) {
+        if (relayChannel.isActive()) {
+            status = Status.CONNECTED;
+            relayChannel.pipeline().addLast(HandlerNames.RELAY, new ServerRelayHandler(petty, ctx.channel()));
+            System.out.println(relayChannel.pipeline());
+        } else {
+            release(ctx);
+        }
+    }
+
     protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Q request);
 
     protected abstract void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Q request);
 
+    public enum Status {
+
+        UNCONNECTED, CONNECTED
+
+    }
 }

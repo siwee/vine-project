@@ -12,9 +12,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
-public final class Socks5ClientConnectionHandler extends ClientConnectionHandler<Socks5CommandRequest> {
+public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5CommandRequest> {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks5ClientConnectionHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks5ClientRelayHandler.class);
 
     public static final DefaultSocks5InitialResponse NO_AUTH_RESPONSE = new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH);
     public static final DefaultSocks5InitialResponse PASSWORD_RESPONSE = new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD);
@@ -22,7 +22,7 @@ public final class Socks5ClientConnectionHandler extends ClientConnectionHandler
     public static final DefaultSocks5PasswordAuthResponse AUTH_SUCCESS = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS);
     public static final DefaultSocks5PasswordAuthResponse AUTH_FAILURE = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE);
 
-    public Socks5ClientConnectionHandler(PettyServer petty) {
+    public Socks5ClientRelayHandler(PettyServer petty) {
         super(petty, logger);
     }
 
@@ -69,7 +69,6 @@ public final class Socks5ClientConnectionHandler extends ClientConnectionHandler
     }
 
     protected void cmdRequestHandler(ChannelHandlerContext ctx, Socks5CommandRequest request, ChannelPipeline pipeline) {
-        pipeline.remove(HandlerNames.DECODER);
         if (request.type() == Socks5CommandType.CONNECT) {
             serverAddress = InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
             doConnectServer(ctx, ctx.channel(), request);
@@ -83,10 +82,12 @@ public final class Socks5ClientConnectionHandler extends ClientConnectionHandler
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
             request.dstAddrType(), request.dstAddr(), request.dstPort());
-        clientChannel.writeAndFlush(response).addListener(future -> {
+        ctx.writeAndFlush(response).addListener(future -> {
             if (future.isSuccess()) {
-                ctx.pipeline().remove(HandlerNames.ENCODER);
-                status = Status.CONNECTED;
+                ChannelPipeline pipeline = clientChannel.pipeline();
+                pipeline.remove(HandlerNames.DECODER);
+                pipeline.remove(Socks5ServerEncoder.DEFAULT);
+                addServerRelayHandler(ctx);
             } else {
                 release(ctx);
             }

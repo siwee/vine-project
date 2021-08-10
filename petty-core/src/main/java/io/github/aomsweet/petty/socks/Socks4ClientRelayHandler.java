@@ -1,27 +1,26 @@
 package io.github.aomsweet.petty.socks;
 
 import io.github.aomsweet.petty.ChannelUtils;
-import io.github.aomsweet.petty.ClientConnectionHandler;
+import io.github.aomsweet.petty.ClientRelayHandler;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.socksx.v4.*;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
-@ChannelHandler.Sharable
-public final class Socks4ClientConnectionHandler extends ClientConnectionHandler<Socks4CommandRequest> {
+public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4CommandRequest> {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ClientConnectionHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ClientRelayHandler.class);
 
     public static final DefaultSocks4CommandResponse SUCCESS_RESPONSE = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
     public static final DefaultSocks4CommandResponse REJECTED_OR_FAILED_RESPONSE = new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED);
 
-    public Socks4ClientConnectionHandler(PettyServer petty) {
+    public Socks4ClientRelayHandler(PettyServer petty) {
         super(petty, logger);
     }
 
@@ -45,11 +44,10 @@ public final class Socks4ClientConnectionHandler extends ClientConnectionHandler
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
         clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
             if (future.isSuccess()) {
-                clientChannel.pipeline().remove(HandlerNames.DECODER);
-                clientChannel.pipeline().remove(Socks4ServerEncoder.INSTANCE);
-                if (relayChannel.isActive()) {
-                    status = Status.CONNECTED;
-                }
+                ChannelPipeline pipeline = clientChannel.pipeline();
+                pipeline.remove(HandlerNames.DECODER);
+                pipeline.remove(Socks4ServerEncoder.INSTANCE);
+                addServerRelayHandler(ctx);
             } else {
                 release(ctx);
             }

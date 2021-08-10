@@ -3,7 +3,6 @@ package io.github.aomsweet.petty.http;
 import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -15,21 +14,18 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.InetSocketAddress;
-
 /**
  * @author aomsweet
  */
-@ChannelHandler.Sharable
-public class HttpTunnelClientConnectionHandler extends HttpClientConnectionHandler {
+public class HttpTunnelClientRelayHandler extends HttpClientRelayHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelClientConnectionHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelClientRelayHandler.class);
 
-    public HttpTunnelClientConnectionHandler(PettyServer petty) {
+    public HttpTunnelClientRelayHandler(PettyServer petty) {
         super(petty, logger);
     }
 
-    public HttpTunnelClientConnectionHandler(PettyServer petty, InternalLogger logger) {
+    public HttpTunnelClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
     }
 
@@ -56,7 +52,7 @@ public class HttpTunnelClientConnectionHandler extends HttpClientConnectionHandl
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
         ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE)).addListener(future -> {
             if (future.isSuccess()) {
-                status = Status.CONNECTED;
+                addServerRelayHandler(ctx);
             } else {
                 release(ctx);
             }

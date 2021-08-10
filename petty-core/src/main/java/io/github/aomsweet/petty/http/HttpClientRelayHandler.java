@@ -1,6 +1,9 @@
 package io.github.aomsweet.petty.http;
 
-import io.github.aomsweet.petty.*;
+import io.github.aomsweet.petty.ClientRelayHandler;
+import io.github.aomsweet.petty.PettyServer;
+import io.github.aomsweet.petty.ProxyAuthenticator;
+import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -18,12 +21,12 @@ import java.util.Base64;
 /**
  * @author aomsweet
  */
-public abstract class HttpClientConnectionHandler extends ClientConnectionHandler<HttpRequest> {
+public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequest> {
 
     public static final byte[] UNAUTHORIZED_RESPONSE = "HTTP/1.1 407 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Access to the staging site\"\r\n\r\n".getBytes();
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
-    public HttpClientConnectionHandler(PettyServer petty, InternalLogger logger) {
+    public HttpClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
     }
 
@@ -48,11 +51,11 @@ public abstract class HttpClientConnectionHandler extends ClientConnectionHandle
         }
     }
 
-    public abstract void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest);
+    public abstract void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception;
 
-    public abstract void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent);
+    public abstract void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) throws Exception;
 
-    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) {
+    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) throws Exception {
         ctx.fireChannelRead(message);
     }
 
@@ -60,8 +63,9 @@ public abstract class HttpClientConnectionHandler extends ClientConnectionHandle
         return httpRequest.method().name() + ' ' + httpRequest.uri() + ' ' + httpRequest.protocolVersion();
     }
 
-    public boolean authorize(ChannelHandlerContext ctx, ProxyAuthenticator authenticator, Credentials credentials) {
-        boolean authorized = authenticator.authenticate(credentials.getUsername(), credentials.getPassword());
+    public boolean authorize(ChannelHandlerContext ctx, Credentials credentials) {
+        ProxyAuthenticator authenticator = petty.getProxyAuthenticator();
+        boolean authorized = authenticator == null || authenticator.authenticate(credentials.getUsername(), credentials.getPassword());
         if (!authorized) {
             ByteBuf byteBuf = ctx.alloc().buffer(UNAUTHORIZED_RESPONSE.length);
             ctx.writeAndFlush(byteBuf.writeBytes(UNAUTHORIZED_RESPONSE)).addListener(ChannelFutureListener.CLOSE);

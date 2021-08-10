@@ -12,15 +12,14 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * @author aomsweet
  */
-public abstract class ConnectionHandler extends ChannelInboundHandlerAdapter {
+public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
 
     protected final InternalLogger logger;
     protected final PettyServer petty;
 
-    protected Status status;
     protected Channel relayChannel;
 
-    public ConnectionHandler(PettyServer petty, InternalLogger logger) {
+    public RelayHandler(PettyServer petty, InternalLogger logger) {
         this.petty = petty;
         this.logger = logger;
     }
@@ -35,21 +34,14 @@ public abstract class ConnectionHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (status == Status.CONNECTED) {
-            if (relayChannel.isActive()) {
-                relayChannel.writeAndFlush(msg);
-            } else {
-                ReferenceCountUtil.release(msg);
-                release(ctx);
-            }
+    public void relay(ChannelHandlerContext ctx, Object msg) {
+        if (relayChannel.isActive()) {
+            relayChannel.writeAndFlush(msg);
         } else {
-            channelRead0(ctx, msg);
+            ReferenceCountUtil.release(msg);
+            release(ctx);
         }
     }
-
-    public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
@@ -84,12 +76,6 @@ public abstract class ConnectionHandler extends ChannelInboundHandlerAdapter {
         } finally {
             ctx.close();
         }
-    }
-
-    public enum Status {
-
-        UNCONNECTED, CONNECTED
-
     }
 
 }
