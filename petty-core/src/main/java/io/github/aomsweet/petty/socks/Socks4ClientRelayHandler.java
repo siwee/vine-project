@@ -47,7 +47,7 @@ public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4Com
                 ChannelPipeline pipeline = clientChannel.pipeline();
                 pipeline.remove(HandlerNames.DECODER);
                 pipeline.remove(Socks4ServerEncoder.INSTANCE);
-                addServerRelayHandler(ctx);
+                relayReady(ctx);
             } else {
                 release(ctx);
             }

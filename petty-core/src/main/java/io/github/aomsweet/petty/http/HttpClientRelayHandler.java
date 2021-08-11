@@ -59,10 +59,6 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
         ctx.fireChannelRead(message);
     }
 
-    public String getHttpRequestInitialLine(HttpRequest httpRequest) {
-        return httpRequest.method().name() + ' ' + httpRequest.uri() + ' ' + httpRequest.protocolVersion();
-    }
-
     public boolean authorize(ChannelHandlerContext ctx, Credentials credentials) {
         ProxyAuthenticator authenticator = petty.getProxyAuthenticator();
         boolean authorized = authenticator == null || authenticator.authenticate(credentials.getUsername(), credentials.getPassword());
@@ -105,5 +101,9 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
                 return new Credentials(null, decode);
             }
         }
+    }
+
+    public String getHttpRequestInitialLine(HttpRequest httpRequest) {
+        return httpRequest.method().name() + ' ' + httpRequest.uri() + ' ' + httpRequest.protocolVersion();
     }
 }

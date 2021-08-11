@@ -5,7 +5,6 @@ import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContent;
@@ -25,10 +24,6 @@ public class HttpTunnelClientRelayHandler extends HttpClientRelayHandler {
         super(petty, logger);
     }
 
-    public HttpTunnelClientRelayHandler(PettyServer petty, InternalLogger logger) {
-        super(petty, logger);
-    }
-
     @Override
     public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) {
         doConnectServer(ctx, ctx.channel(), httpRequest);
@@ -40,19 +35,13 @@ public class HttpTunnelClientRelayHandler extends HttpClientRelayHandler {
     }
 
     @Override
-    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) {
-        ReferenceCountUtil.release(message);
-        ctx.close();
-    }
-
-    @Override
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
         ChannelPipeline clientPipeline = clientChannel.pipeline();
         clientPipeline.remove(HandlerNames.DECODER);
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
         ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE)).addListener(future -> {
             if (future.isSuccess()) {
-                addServerRelayHandler(ctx);
+                relayReady(ctx);
             } else {
                 release(ctx);
             }

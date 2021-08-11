@@ -2,7 +2,6 @@ package io.github.aomsweet.petty.http;
 
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,24 +28,20 @@ public class HttpTunnelDuplexClientRelayHandler extends HttpClientRelayHandler {
     }
 
     @Override
-    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception {
         ctx.pipeline().remove(HandlerNames.DECODER);
-        try {
-            serverAddress = resolveServerAddress(httpRequest);
-        } catch (ResolveServerAddressException e) {
-            e.printStackTrace();
-        }
+        serverAddress = resolveServerAddress(httpRequest);
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
         ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE)).addListener(future -> {
             if (!future.isSuccess()) {
-                ctx.close();
+                release(ctx);
             }
         });
         doConnectServer(ctx, ctx.channel(), httpRequest);
     }
 
     @Override
-    public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
+    public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) throws Exception {
         ReferenceCountUtil.release(httpContent);
     }
 
@@ -57,15 +52,11 @@ public class HttpTunnelDuplexClientRelayHandler extends HttpClientRelayHandler {
 
     @Override
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        addServerRelayHandler(ctx);
+        relayReady(ctx);
         if (clientHello != null) {
             relayChannel.writeAndFlush(clientHello);
+            clientHello = null;
         }
-    }
-
-    @Override
-    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        release(ctx);
     }
 
     @Override

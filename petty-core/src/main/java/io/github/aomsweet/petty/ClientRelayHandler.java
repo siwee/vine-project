@@ -24,7 +24,7 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (status == Status.CONNECTED) {
+        if (status == Status.READY) {
             relay(ctx, msg);
         } else {
             channelRead0(ctx, msg);
@@ -67,23 +67,24 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         }
     }
 
-    public void addServerRelayHandler(ChannelHandlerContext ctx) {
+    public void relayReady(ChannelHandlerContext ctx) {
         if (relayChannel.isActive()) {
-            status = Status.CONNECTED;
+            status = Status.READY;
             relayChannel.pipeline().addLast(HandlerNames.RELAY, new ServerRelayHandler(petty, ctx.channel()));
-            System.out.println(relayChannel.pipeline());
         } else {
             release(ctx);
         }
     }
 
-    protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Q request);
+    protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception;
 
-    protected abstract void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Q request);
+    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception {
+        release(ctx);
+    }
 
     public enum Status {
 
-        UNCONNECTED, CONNECTED
+        UNCONNECTED, CONNECTED, SSL_HANDSHAKE_COMPLETED, READY
 
     }
 }

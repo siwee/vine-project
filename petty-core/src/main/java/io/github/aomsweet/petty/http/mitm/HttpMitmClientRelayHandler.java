@@ -34,14 +34,17 @@ public class HttpMitmClientRelayHandler extends MitmClientRelayHandler {
         InetSocketAddress serverAddress = resolveServerAddress(request);
         if (this.serverAddress == null) {
             this.serverAddress = serverAddress;
+            httpMessages.offer(request);
             doConnectServer(ctx, ctx.channel(), request);
         } else if (this.serverAddress.equals(serverAddress)) {
             relay(ctx, request);
         } else {
             status = Status.UNCONNECTED;
-            this.serverAddress = serverAddress;
             relayChannel.pipeline().remove(HandlerNames.RELAY);
             ChannelUtils.closeOnFlush(relayChannel);
+
+            this.serverAddress = serverAddress;
+            httpMessages.offer(request);
             doConnectServer(ctx, ctx.channel(), request);
         }
     }
@@ -51,7 +54,7 @@ public class HttpMitmClientRelayHandler extends MitmClientRelayHandler {
         if (status == Status.CONNECTED) {
             relay(ctx, httpContent);
         } else {
-            queue.offer(httpContent);
+            httpMessages.offer(httpContent);
         }
     }
 

@@ -30,7 +30,7 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
             if (logger.isDebugEnabled()) {
                 logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
             }
-            ChannelUtils.closeOnFlush(relayChannel);
+            release(ctx);
         }
     }
 
@@ -38,8 +38,8 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         if (relayChannel.isActive()) {
             relayChannel.writeAndFlush(msg);
         } else {
-            ReferenceCountUtil.release(msg);
             release(ctx);
+            ReferenceCountUtil.release(msg);
         }
     }
 
@@ -74,7 +74,7 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
                 logger.error("{}: {}", cause.getClass().getName(), cause.getMessage(), cause);
             }
         } finally {
-            ctx.close();
+            release(ctx);
         }
     }
 

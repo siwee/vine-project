@@ -24,64 +24,34 @@ import java.util.Queue;
 public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
 
     boolean isSsl;
-    Queue<Object> queue;
+    Queue<Object> httpMessages;
 
     public MitmClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
-        this.queue = new ArrayDeque<>(4);
+        this.httpMessages = new ArrayDeque<>(4);
     }
 
     @Override
-    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) {
-        release(ctx);
-        ReferenceCountUtil.release(message);
-    }
-
-    @Override
-    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        try {
-            ChannelPipeline pipeline = relayChannel.pipeline();
-            if (isSsl) {
-                SslContext clientSslContext = getClientSslContext();
-                pipeline.addLast(HandlerNames.SSL, clientSslContext.newHandler(relayChannel.alloc(),
-                    serverAddress.getHostName(), serverAddress.getPort()));
-            }
-            pipeline.addLast(HandlerNames.ENCODER, new HttpRequestEncoder());
-            addServerRelayHandler(ctx);
-            relay(ctx, request);
-            flushQueue(false);
-        } catch (SSLException e) {
-            release(ctx);
+    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) throws Exception {
+        ChannelPipeline pipeline = relayChannel.pipeline();
+        if (isSsl) {
+            SslContext clientSslContext = getClientSslContext();
+            pipeline.addLast(HandlerNames.SSL, clientSslContext.newHandler(relayChannel.alloc(),
+                serverAddress.getHostName(), serverAddress.getPort()));
+        }
+        pipeline.addLast(HandlerNames.ENCODER, new HttpRequestEncoder());
+        relayReady(ctx);
+        for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
+            relayChannel.writeAndFlush(message);
         }
     }
 
     @Override
-    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        release(ctx);
-    }
-
-    public void flushQueue(boolean release) {
-        do {
-            Object message = queue.poll();
-            if (release) {
-                ReferenceCountUtil.release(message);
-            } else {
-                relayChannel.writeAndFlush(message);
-            }
-        } while (!queue.isEmpty());
-    }
-
-    @Override
     public void release(ChannelHandlerContext ctx) {
-        flushQueue(true);
+        for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
+            ReferenceCountUtil.release(message);
+        }
         super.release(ctx);
-    }
-
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        release(ctx);
-        super.exceptionCaught(ctx, cause);
     }
 
     public SslContext getClientSslContext() throws SSLException {
