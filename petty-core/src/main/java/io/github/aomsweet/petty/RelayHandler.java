@@ -26,12 +26,10 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (relayChannel != null && relayChannel.isActive()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
-            }
-            release(ctx);
+        if (logger.isDebugEnabled()) {
+            logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
         }
+        release(ctx);
     }
 
     public void relay(ChannelHandlerContext ctx, Object msg) {

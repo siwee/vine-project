@@ -3,6 +3,7 @@ package io.github.aomsweet.petty;
 import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.logging.InternalLogger;
 
@@ -14,7 +15,7 @@ import java.util.List;
  */
 public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
-    protected Status status;
+    protected State state;
     protected Credentials credentials;
     protected InetSocketAddress serverAddress;
 
@@ -24,7 +25,7 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (status == Status.READY) {
+        if (state == State.READY) {
             relay(ctx, msg);
         } else {
             channelRead0(ctx, msg);
@@ -33,47 +34,44 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
     public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
 
-    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) {
-        try {
-            ServerConnector connector = petty.getConnector();
-            UpstreamProxyManager upstreamProxyManager = petty.getUpstreamProxyManager();
-            List<ProxyInfo> proxyHandlers = null;
-            if (upstreamProxyManager != null) {
-                proxyHandlers = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
-                    clientChannel.remoteAddress(), serverAddress);
-            }
-            ChannelFuture channelFuture = proxyHandlers == null
-                ? connector.channel(serverAddress, ctx)
-                : connector.channel(serverAddress, ctx, proxyHandlers);
-            channelFuture.addListener(future -> {
-                if (future.isSuccess()) {
-                    relayChannel = channelFuture.channel();
-                    if (clientChannel.isActive()) {
-                        onConnected(ctx, clientChannel, request);
-                    } else {
-                        release(ctx);
-                    }
-                } else {
-                    logger.error("Unable to establish a remote connection.", future.cause());
-                    this.onConnectFailed(ctx, clientChannel, request);
-                }
-            });
-        } catch (ResolveServerAddressException e) {
-            logger.error("Unable to get remote address.", e);
-            release(ctx);
-        } catch (Exception e) {
-            e.printStackTrace();
-            release(ctx);
+    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception {
+        ServerConnector connector = petty.getConnector();
+        UpstreamProxyManager upstreamProxyManager = petty.getUpstreamProxyManager();
+        List<ProxyInfo> proxyHandlers = null;
+        if (upstreamProxyManager != null) {
+            proxyHandlers = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
+                clientChannel.remoteAddress(), serverAddress);
         }
+        ChannelFuture channelFuture = proxyHandlers == null
+            ? connector.channel(serverAddress, ctx)
+            : connector.channel(serverAddress, ctx, proxyHandlers);
+        channelFuture.addListener(future -> {
+            if (future.isSuccess()) {
+                state = State.CONNECTED;
+                relayChannel = channelFuture.channel();
+                if (clientChannel.isActive()) {
+                    onConnected(ctx, clientChannel, request);
+                } else {
+                    release(ctx);
+                }
+            } else {
+                logger.error("Unable to establish a remote connection.", future.cause());
+                this.onConnectFailed(ctx, clientChannel, request);
+            }
+        });
     }
 
     public void relayReady(ChannelHandlerContext ctx) {
         if (relayChannel.isActive()) {
-            status = Status.READY;
-            relayChannel.pipeline().addLast(HandlerNames.RELAY, new ServerRelayHandler(petty, ctx.channel()));
+            relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(petty, ctx.channel()));
+            state = State.READY;
         } else {
             release(ctx);
         }
+    }
+
+    public ChannelHandler newServerRelayHandler(PettyServer petty, Channel relayChannel) {
+        return new ServerRelayHandler(petty, relayChannel);
     }
 
     protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception;
@@ -82,9 +80,30 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         release(ctx);
     }
 
-    public enum Status {
+    public enum State {
 
-        UNCONNECTED, CONNECTED, SSL_HANDSHAKE_COMPLETED, READY
+        UNCONNECTED(0),
 
+        CONNECTED(100),
+
+        HANDSHOOK(200),
+
+        READY(300),
+
+        DISCONNECTED(900);
+
+        private int code;
+
+        State(int code) {
+            this.code = code;
+        }
+
+        public boolean isBefore(State state) {
+            return code < state.code;
+        }
+
+        public boolean isAfter(State state) {
+            return code > state.code;
+        }
     }
 }

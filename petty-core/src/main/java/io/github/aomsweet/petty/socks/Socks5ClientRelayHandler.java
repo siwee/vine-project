@@ -68,7 +68,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
         }
     }
 
-    protected void cmdRequestHandler(ChannelHandlerContext ctx, Socks5CommandRequest request, ChannelPipeline pipeline) {
+    protected void cmdRequestHandler(ChannelHandlerContext ctx, Socks5CommandRequest request, ChannelPipeline pipeline) throws Exception {
         if (request.type() == Socks5CommandType.CONNECT) {
             serverAddress = InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
             doConnectServer(ctx, ctx.channel(), request);

@@ -1,9 +1,10 @@
 package io.github.aomsweet.petty.http.mitm;
 
-import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ResolveServerAddressException;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -39,11 +40,11 @@ public class HttpMitmClientRelayHandler extends MitmClientRelayHandler {
         } else if (this.serverAddress.equals(serverAddress)) {
             relay(ctx, request);
         } else {
-            status = Status.UNCONNECTED;
-            relayChannel.pipeline().remove(HandlerNames.RELAY);
-            ChannelUtils.closeOnFlush(relayChannel);
-
             this.serverAddress = serverAddress;
+            relayChannel.pipeline().remove(HandlerNames.RELAY);
+            relayChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            state = State.UNCONNECTED;
+
             httpMessages.offer(request);
             doConnectServer(ctx, ctx.channel(), request);
         }
@@ -51,7 +52,7 @@ public class HttpMitmClientRelayHandler extends MitmClientRelayHandler {
 
     @Override
     public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
-        if (status == Status.CONNECTED) {
+        if (state == State.READY) {
             relay(ctx, httpContent);
         } else {
             httpMessages.offer(httpContent);

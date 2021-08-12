@@ -25,7 +25,7 @@ public class HttpTunnelClientRelayHandler extends HttpClientRelayHandler {
     }
 
     @Override
-    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) {
+    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception {
         doConnectServer(ctx, ctx.channel(), httpRequest);
     }
 

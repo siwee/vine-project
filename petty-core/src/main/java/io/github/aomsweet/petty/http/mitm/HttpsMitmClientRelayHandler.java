@@ -1,10 +1,8 @@
 package io.github.aomsweet.petty.http.mitm;
 
-import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
@@ -57,21 +55,12 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
     }
 
     @Override
-    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) throws Exception {
-        super.onConnected(ctx, clientChannel, request);
-        status = Status.CONNECTED;
-    }
-
-    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
             } else {
                 release(ctx);
-                if (relayChannel != null) {
-                    ChannelUtils.closeOnFlush(relayChannel);
-                }
             }
         }
     }
