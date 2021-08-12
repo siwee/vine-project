@@ -82,28 +82,7 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
     public enum State {
 
-        UNCONNECTED(0),
+        UNCONNECTED, CONNECTED, READY, DISCONNECTED
 
-        CONNECTED(100),
-
-        HANDSHOOK(200),
-
-        READY(300),
-
-        DISCONNECTED(900);
-
-        private int code;
-
-        State(int code) {
-            this.code = code;
-        }
-
-        public boolean isBefore(State state) {
-            return code < state.code;
-        }
-
-        public boolean isAfter(State state) {
-            return code > state.code;
-        }
     }
 }

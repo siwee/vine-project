@@ -46,6 +46,13 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
     }
 
     @Override
+    public void relayReady(ChannelHandlerContext ctx) {
+        if (sslHandshakeCompleted) {
+            super.relayReady(ctx);
+        }
+    }
+
+    @Override
     public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
         if (sslHandshakeCompleted) {
             httpMessages.offer(httpContent);
@@ -59,6 +66,9 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
         if (evt instanceof SslHandshakeCompletionEvent) {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
+                if (state == State.CONNECTED) {
+                    super.relayReady(ctx);
+                }
             } else {
                 release(ctx);
             }
