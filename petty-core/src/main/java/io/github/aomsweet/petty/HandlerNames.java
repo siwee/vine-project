@@ -13,7 +13,6 @@ public class HandlerNames {
     public static final String AGGREGATOR = "aggregator";
     public static final String SSL = "ssl";
     public static final String RELAY = "relay";
-    public static final String CONNECT = "connect";
     public static final String PROXY = "proxy";
 
 }

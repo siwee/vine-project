@@ -48,12 +48,12 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
                 logKnownVersion(ctx, version);
                 pipeline.addLast(HandlerNames.DECODER, new Socks4ServerDecoder());
                 pipeline.addLast(HandlerNames.ENCODER, Socks4ServerEncoder.INSTANCE);
-                pipeline.addLast(HandlerNames.CONNECT, new Socks4ClientRelayHandler(petty));
+                pipeline.addLast(HandlerNames.RELAY, new Socks4ClientRelayHandler(petty));
             } else if (version == 5) {
                 logKnownVersion(ctx, version);
                 pipeline.addLast(HandlerNames.DECODER, new Socks5InitialRequestDecoder());
                 pipeline.addLast(HandlerNames.ENCODER, Socks5ServerEncoder.DEFAULT);
-                pipeline.addLast(HandlerNames.CONNECT, new Socks5ClientRelayHandler(petty));
+                pipeline.addLast(HandlerNames.RELAY, new Socks5ClientRelayHandler(petty));
             } else {
                 pipeline.addLast(HandlerNames.DECODER, new HttpRequestDecoder());
                 pipeline.addLast(httpServerHandler);

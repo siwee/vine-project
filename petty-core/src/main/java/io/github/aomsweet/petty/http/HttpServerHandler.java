@@ -29,12 +29,12 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<HttpRequest> 
         } else {
             if (HttpMethod.CONNECT.equals(httpRequest.method())) {
                 if (petty.getMitmManager() == null) {
-                    ctx.pipeline().addLast(HandlerNames.CONNECT, new HttpTunnelDuplexClientRelayHandler(petty));
+                    ctx.pipeline().addLast(HandlerNames.RELAY, new HttpTunnelDuplexClientRelayHandler(petty));
                 } else {
-                    ctx.pipeline().addLast(HandlerNames.CONNECT, new HttpsMitmClientRelayHandler(petty));
+                    ctx.pipeline().addLast(HandlerNames.RELAY, new HttpsMitmClientRelayHandler(petty));
                 }
             } else {
-                ctx.pipeline().addLast(HandlerNames.CONNECT, new HttpMitmClientRelayHandler(petty));
+                ctx.pipeline().addLast(HandlerNames.RELAY, new HttpMitmClientRelayHandler(petty));
             }
             ctx.fireChannelRead(httpRequest).pipeline().remove(this);
         }

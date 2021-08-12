@@ -65,6 +65,8 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         if (relayChannel.isActive()) {
             relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(petty, ctx.channel()));
             state = State.READY;
+            System.err.println("client: " + ctx.pipeline());
+            System.err.println("server: " + relayChannel.pipeline());
         } else {
             release(ctx);
         }
