@@ -37,14 +37,14 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
             if (httpRequest.decoderResult().isSuccess()) {
                 handleHttpRequest(ctx, httpRequest);
             } else {
-                ctx.close();
+                release(ctx);
             }
         } else if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
             if (httpContent.decoderResult().isSuccess()) {
                 handleHttpContent(ctx, httpContent);
             } else {
-                ctx.close();
+                release(ctx);
             }
         } else {
             handleUnknownMessage(ctx, msg);

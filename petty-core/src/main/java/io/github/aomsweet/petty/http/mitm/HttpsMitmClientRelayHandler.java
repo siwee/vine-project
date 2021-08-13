@@ -69,8 +69,6 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
                 if (state == State.CONNECTED) {
                     super.relayReady(ctx);
                 }
-            } else {
-                release(ctx);
             }
         }
     }

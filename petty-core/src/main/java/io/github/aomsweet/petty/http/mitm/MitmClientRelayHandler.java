@@ -47,11 +47,11 @@ public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
     }
 
     @Override
-    public void release(ChannelHandlerContext ctx) {
+    public void destroy(ChannelHandlerContext ctx) {
         for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
             ReferenceCountUtil.release(message);
         }
-        super.release(ctx);
+        super.destroy(ctx);
     }
 
     public SslContext getClientSslContext() throws SSLException {

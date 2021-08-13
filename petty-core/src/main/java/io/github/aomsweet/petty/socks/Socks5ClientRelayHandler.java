@@ -1,6 +1,9 @@
 package io.github.aomsweet.petty.socks;
 
-import io.github.aomsweet.petty.*;
+import io.github.aomsweet.petty.ClientRelayHandler;
+import io.github.aomsweet.petty.HandlerNames;
+import io.github.aomsweet.petty.PettyServer;
+import io.github.aomsweet.petty.ProxyAuthenticator;
 import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -74,7 +77,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
             doConnectServer(ctx, ctx.channel(), request);
         } else {
             logger.error("Unsupported Socks5 {} command.", request.type());
-            ctx.close();
+            release(ctx);
         }
     }
 
@@ -88,8 +91,6 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
                 pipeline.remove(HandlerNames.DECODER);
                 pipeline.remove(Socks5ServerEncoder.DEFAULT);
                 relayReady(ctx);
-            } else {
-                release(ctx);
             }
         });
     }
@@ -97,6 +98,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
     @Override
     protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, request.dstAddrType());
-        ChannelUtils.closeOnFlush(clientChannel, response);
+        ctx.writeAndFlush(response);
+        release(ctx);
     }
 }

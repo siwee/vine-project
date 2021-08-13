@@ -32,11 +32,7 @@ public class HttpTunnelDuplexClientRelayHandler extends HttpClientRelayHandler {
         ctx.pipeline().remove(HandlerNames.DECODER);
         serverAddress = resolveServerAddress(httpRequest);
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
-        ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE)).addListener(future -> {
-            if (!future.isSuccess()) {
-                release(ctx);
-            }
-        });
+        ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE));
         doConnectServer(ctx, ctx.channel(), httpRequest);
     }
 
@@ -60,10 +56,11 @@ public class HttpTunnelDuplexClientRelayHandler extends HttpClientRelayHandler {
     }
 
     @Override
-    public void release(ChannelHandlerContext ctx) {
-        super.release(ctx);
+    public void destroy(ChannelHandlerContext ctx) {
         if (clientHello != null) {
             ReferenceCountUtil.release(clientHello);
+            clientHello = null;
         }
+        super.destroy(ctx);
     }
 }

@@ -17,6 +17,7 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
     protected final InternalLogger logger;
     protected final PettyServer petty;
 
+    protected State state;
     protected Channel relayChannel;
 
     public RelayHandler(PettyServer petty, InternalLogger logger) {
@@ -52,7 +53,17 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         relayChannel.config().setAutoRead(isWritable);
     }
 
-    public void release(ChannelHandlerContext ctx) {
+    public final void release(ChannelHandlerContext ctx) {
+        if (state != State.RELEASED) {
+            destroy(ctx);
+            state = State.RELEASED;
+        }
+    }
+
+    protected void destroy(ChannelHandlerContext ctx) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Channel released. {}", ctx.channel());
+        }
         ctx.close();
         if (relayChannel != null && relayChannel.isActive()) {
             ChannelUtils.closeOnFlush(relayChannel);
@@ -74,6 +85,12 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         } finally {
             release(ctx);
         }
+    }
+
+    public enum State {
+
+        UNCONNECTED, CONNECTED, READY, RELEASED
+
     }
 
 }

@@ -15,6 +15,7 @@ public class ServerRelayHandler extends RelayHandler {
     public ServerRelayHandler(PettyServer petty, Channel relayChannel) {
         super(petty, logger);
         this.relayChannel = relayChannel;
+        this.state = State.READY;
     }
 
     @Override

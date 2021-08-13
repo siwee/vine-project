@@ -15,7 +15,6 @@ import java.util.List;
  */
 public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
-    protected State state;
     protected Credentials credentials;
     protected InetSocketAddress serverAddress;
 
@@ -51,8 +50,6 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
                 relayChannel = channelFuture.channel();
                 if (clientChannel.isActive()) {
                     onConnected(ctx, clientChannel, request);
-                } else {
-                    release(ctx);
                 }
             } else {
                 logger.error("Unable to establish a remote connection.", future.cause());
@@ -65,8 +62,8 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         if (relayChannel.isActive()) {
             relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(petty, ctx.channel()));
             state = State.READY;
-            System.err.println("client: " + ctx.pipeline());
-            System.err.println("server: " + relayChannel.pipeline());
+            // System.err.println("client: " + ctx.pipeline());
+            // System.err.println("server: " + relayChannel.pipeline());
         } else {
             release(ctx);
         }
@@ -82,9 +79,4 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         release(ctx);
     }
 
-    public enum State {
-
-        UNCONNECTED, CONNECTED, READY, DISCONNECTED
-
-    }
 }

@@ -1,6 +1,5 @@
 package io.github.aomsweet.petty.socks;
 
-import io.github.aomsweet.petty.ChannelUtils;
 import io.github.aomsweet.petty.ClientRelayHandler;
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
@@ -33,7 +32,7 @@ public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4Com
                 doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
             } else {
                 logger.error("Unsupported Socks4 {} command.", request.type());
-                ctx.close();
+                release(ctx);
             }
         } else {
             ctx.fireChannelRead(msg);
@@ -48,14 +47,13 @@ public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4Com
                 pipeline.remove(HandlerNames.DECODER);
                 pipeline.remove(Socks4ServerEncoder.INSTANCE);
                 relayReady(ctx);
-            } else {
-                release(ctx);
             }
         });
     }
 
     @Override
     protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
-        ChannelUtils.closeOnFlush(clientChannel, REJECTED_OR_FAILED_RESPONSE);
+        ctx.writeAndFlush(REJECTED_OR_FAILED_RESPONSE);
+        release(ctx);
     }
 }
