@@ -32,18 +32,16 @@ public class HttpMitmClientRelayHandler extends MitmClientRelayHandler {
 
     @Override
     public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
-        InetSocketAddress serverAddress = resolveServerAddress(request);
-        if (this.serverAddress == null) {
-            this.serverAddress = serverAddress;
-            httpMessages.offer(request);
-            doConnectServer(ctx, ctx.channel(), request);
-        } else if (this.serverAddress.equals(serverAddress)) {
+        InetSocketAddress targetAddress = resolveServerAddress(request);
+        if (targetAddress.equals(this.serverAddress)) {
             relay(ctx, request);
         } else {
-            this.serverAddress = serverAddress;
-            relayChannel.pipeline().remove(HandlerNames.RELAY);
-            relayChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-            state = State.UNCONNECTED;
+            this.serverAddress = targetAddress;
+            if (state == State.READY) {
+                relayChannel.pipeline().remove(HandlerNames.RELAY);
+                relayChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                state = State.UNCONNECTED;
+            }
 
             httpMessages.offer(request);
             doConnectServer(ctx, ctx.channel(), request);
