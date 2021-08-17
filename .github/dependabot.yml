@@ -17,4 +17,5 @@ updates:
             -   dependency-name: org.junit.jupiter:junit-jupiter-engine
             -   dependency-name: org.graalvm.sdk:graal-sdk
             -   dependency-name: org.graalvm.nativeimage:svm
-        rebase-strategy: disabled
+                dependency-type: all
+        rebase-strategy: auto
