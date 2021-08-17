@@ -15,8 +15,6 @@
         <exec.mainClass>io.github.aomsweet.petty.app.PettyLauncher</exec.mainClass>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-
-        <graalvm.version>21.1.0</graalvm.version>
     </properties>
 
     <dependencies>
@@ -46,7 +44,6 @@
         <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
-            <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -54,7 +51,6 @@
         <dependency>
             <groupId>org.graalvm.nativeimage</groupId>
             <artifactId>svm</artifactId>
-            <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
 

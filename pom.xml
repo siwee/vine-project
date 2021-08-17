@@ -25,6 +25,7 @@
 
         <netty.version>4.1.67.Final</netty.version>
         <bouncycastle.version>1.69</bouncycastle.version>
+        <graalvm.version>21.1.0</graalvm.version>
         <logback.version>1.3.0-alpha9</logback.version>
         <jansi.version>2.3.4</jansi.version>
         <lombok.version>1.18.20</lombok.version>
@@ -74,6 +75,19 @@
                 <artifactId>bcpkix-jdk15on</artifactId>
                 <version>${bouncycastle.version}</version>
                 <optional>true</optional>
+            </dependency>
+
+            <dependency>
+                <groupId>org.graalvm.sdk</groupId>
+                <artifactId>graal-sdk</artifactId>
+                <version>${graalvm.version}</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/org.graalvm.nativeimage/svm -->
+            <dependency>
+                <groupId>org.graalvm.nativeimage</groupId>
+                <artifactId>svm</artifactId>
+                <version>${graalvm.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
