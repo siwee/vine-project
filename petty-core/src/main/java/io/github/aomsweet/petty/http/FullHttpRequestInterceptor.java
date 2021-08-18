@@ -25,10 +25,8 @@ public abstract class FullHttpRequestInterceptor implements HttpRequestIntercept
         this.maxContentLength = maxContentLength;
     }
 
-    public abstract boolean match(HttpRequest httpRequest);
-
     @Override
-    public final void beforeSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest) throws Exception {
+    public final void preHandle(Channel clientChannel, HttpRequest httpRequest) throws Exception {
         if (httpRequest instanceof FullHttpRequest) {
             FullHttpRequest fullHttpRequest = (FullHttpRequest) httpRequest;
             if (fullHttpRequest.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
@@ -37,33 +35,22 @@ public abstract class FullHttpRequestInterceptor implements HttpRequestIntercept
                 fullHttpRequest.content().retain();
                 fullHttpRequest.headers().set(HttpHeaderNames.CONTENT_LENGTH, fullHttpRequest.content().readableBytes());
             }
-            beforeSend(clientChannel, serverChannel, fullHttpRequest);
-        } else if (match(httpRequest)) {
             ChannelPipeline pipeline = clientChannel.pipeline();
-            pipeline.addAfter(HandlerNames.DECODER, HandlerNames.DECOMPRESS, new HttpContentDecompressor());
-            pipeline.addAfter(HandlerNames.DECOMPRESS, HandlerNames.AGGREGATOR, new HttpObjectAggregator(maxContentLength));
-            pipeline.fireChannelRead(httpRequest);
+            pipeline.remove(HandlerNames.DECOMPRESS);
+            pipeline.remove(HandlerNames.AGGREGATOR);
+            preHandle(clientChannel, fullHttpRequest);
+        } else if (match(httpRequest)) {
+            clientChannel.pipeline()
+                .addAfter(HandlerNames.DECODER, HandlerNames.DECOMPRESS, new HttpContentDecompressor())
+                .addAfter(HandlerNames.DECOMPRESS, HandlerNames.AGGREGATOR, new HttpObjectAggregator(maxContentLength))
+                .fireChannelRead(httpRequest);
         }
     }
 
-    public abstract void beforeSend(Channel clientChannel, Channel serverChannel, FullHttpRequest fullHttpRequest) throws Exception;
+    public abstract void preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception;
 
     @Override
-    public final void beforeSend(Channel clientChannel, Channel serverChannel, HttpContent httpContent) throws Exception {
-
-    }
-
-    @Override
-    public final void afterSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest) throws Exception {
-        if (httpRequest instanceof FullHttpRequest) {
-            afterSend(clientChannel, serverChannel, (FullHttpRequest) httpRequest);
-        }
-    }
-
-    public abstract void afterSend(Channel clientChannel, Channel serverChannel, FullHttpRequest fullHttpRequest) throws Exception;
-
-    @Override
-    public final void afterSend(Channel clientChannel, Channel serverChannel, HttpContent httpContent) throws Exception {
+    public final void preHandle(Channel clientChannel, HttpContent httpContent) throws Exception {
 
     }
 

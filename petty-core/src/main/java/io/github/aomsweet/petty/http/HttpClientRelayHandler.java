@@ -26,15 +26,25 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
     public static final byte[] UNAUTHORIZED_RESPONSE = "HTTP/1.1 407 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Access to the staging site\"\r\n\r\n".getBytes();
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
+    HttpRequest httpRequest;
+
     public HttpClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        HttpInterceptorManager interceptorManager = petty.getHttpInterceptorManager();
         if (msg instanceof HttpRequest) {
             HttpRequest httpRequest = (HttpRequest) msg;
             if (httpRequest.decoderResult().isSuccess()) {
+                if (interceptorManager != null) {
+                    HttpRequestInterceptor interceptor = interceptorManager.matchRequestInterceptor(httpRequest);
+                    if (interceptor != null) {
+                        this.httpRequest = httpRequest;
+                        interceptor.preHandle(ctx.channel(), httpRequest);
+                    }
+                }
                 handleHttpRequest(ctx, httpRequest);
             } else {
                 release(ctx);
@@ -42,6 +52,12 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
         } else if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
             if (httpContent.decoderResult().isSuccess()) {
+                if (interceptorManager != null) {
+                    HttpRequestInterceptor interceptor = interceptorManager.matchRequestInterceptor(httpRequest);
+                    if (interceptor != null) {
+                        interceptor.preHandle(ctx.channel(), httpContent);
+                    }
+                }
                 handleHttpContent(ctx, httpContent);
             } else {
                 release(ctx);

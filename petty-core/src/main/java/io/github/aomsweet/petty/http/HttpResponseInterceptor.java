@@ -10,16 +10,12 @@ import io.netty.handler.codec.http.HttpResponse;
  */
 public interface HttpResponseInterceptor {
 
-    default void beforeSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
+    boolean match(HttpRequest httpRequest, HttpResponse httpResponse);
+
+    default void preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
     }
 
-    default void beforeSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpContent httpContent) throws Exception {
-    }
-
-    default void afterSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
-    }
-
-    default void afterSend(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpContent httpContent) throws Exception {
+    default void preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpContent httpContent) throws Exception {
     }
 
 }

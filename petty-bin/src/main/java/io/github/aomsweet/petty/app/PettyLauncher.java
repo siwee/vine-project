@@ -10,7 +10,10 @@ import io.github.aomsweet.petty.ProxyInfo;
 import io.github.aomsweet.petty.ProxyType;
 import io.github.aomsweet.petty.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.petty.app.logback.LogbackConfigurator;
-import io.github.aomsweet.petty.http.mitm.BouncyCastleSelfSignedMitmManager;
+import io.github.aomsweet.petty.http.HttpInterceptorManager;
+import io.github.aomsweet.petty.http.HttpRequestInterceptor;
+import io.netty.channel.Channel;
+import io.netty.handler.codec.http.HttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -44,7 +47,20 @@ public class PettyLauncher {
             // .withUpstreamProxy(ProxyType.SOCKS5, "127.0.0.1", 7890)
             .withUpstreamProxyManager((request, credentials, clientAddress, serverAddress) ->
                 List.of(new ProxyInfo(ProxyType.HTTP, "127.0.0.1", 8888)))
-            .withMitmManager(new BouncyCastleSelfSignedMitmManager())
+            // .withMitmManager(new BouncyCastleSelfSignedMitmManager())
+            .withHttpInterceptorManager(new HttpInterceptorManager()
+                .addInterceptor(new HttpRequestInterceptor() {
+                    @Override
+                    public boolean match(HttpRequest httpRequest) {
+                        return true;
+                    }
+
+                    @Override
+                    public void preHandle(Channel clientChannel, HttpRequest httpRequest) throws Exception {
+                        httpRequest.headers().add("Petty", "for test.");
+                    }
+                })
+            )
             .withPort(2228)
             .build();
         petty.start().whenComplete((channel, cause) -> {
