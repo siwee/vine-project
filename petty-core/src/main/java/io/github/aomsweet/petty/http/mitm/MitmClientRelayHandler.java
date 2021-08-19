@@ -39,7 +39,7 @@ public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
             pipeline.addLast(HandlerNames.SSL, clientSslContext.newHandler(relayChannel.alloc(),
                 serverAddress.getHostName(), serverAddress.getPort()));
         }
-        pipeline.addLast(HandlerNames.ENCODER, new HttpRequestEncoder());
+        pipeline.addLast(HandlerNames.REQUEST_ENCODER, new HttpRequestEncoder());
         relayReady(ctx);
         for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
             relayChannel.writeAndFlush(message);

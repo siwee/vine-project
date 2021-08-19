@@ -10,9 +10,12 @@ import io.github.aomsweet.petty.ProxyInfo;
 import io.github.aomsweet.petty.ProxyType;
 import io.github.aomsweet.petty.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.petty.app.logback.LogbackConfigurator;
+import io.github.aomsweet.petty.http.FullHttpRequestInterceptor;
+import io.github.aomsweet.petty.http.FullHttpResponseInterceptor;
 import io.github.aomsweet.petty.http.HttpInterceptorManager;
-import io.github.aomsweet.petty.http.HttpRequestInterceptor;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,15 +52,18 @@ public class PettyLauncher {
                 List.of(new ProxyInfo(ProxyType.HTTP, "127.0.0.1", 8888)))
             // .withMitmManager(new BouncyCastleSelfSignedMitmManager())
             .withHttpInterceptorManager(new HttpInterceptorManager()
-                .addInterceptor(new HttpRequestInterceptor() {
+                .addInterceptor(new FullHttpRequestInterceptor() {
                     @Override
-                    public boolean match(HttpRequest httpRequest) {
+                    public boolean preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception {
+                        httpRequest.headers().add("Petty", "for test.");
                         return true;
                     }
-
+                })
+                .addInterceptor(new FullHttpResponseInterceptor() {
                     @Override
-                    public void preHandle(Channel clientChannel, HttpRequest httpRequest) throws Exception {
-                        httpRequest.headers().add("Petty", "for test.");
+                    public boolean preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, FullHttpResponse httpResponse) throws Exception {
+                        httpResponse.headers().add("Petty", "for test.");
+                        return true;
                     }
                 })
             )

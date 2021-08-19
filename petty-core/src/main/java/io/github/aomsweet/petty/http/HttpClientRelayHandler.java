@@ -1,22 +1,15 @@
 package io.github.aomsweet.petty.http;
 
-import io.github.aomsweet.petty.ClientRelayHandler;
-import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ProxyAuthenticator;
-import io.github.aomsweet.petty.ResolveServerAddressException;
+import io.github.aomsweet.petty.*;
 import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpRequest;
+import io.netty.channel.*;
+import io.netty.handler.codec.http.*;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
 import java.util.Base64;
+import java.util.Queue;
 
 /**
  * @author aomsweet
@@ -27,6 +20,8 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
     HttpRequest httpRequest;
+    Queue<HttpRequestInterceptor> requestInterceptors;
+    Queue<HttpResponseInterceptor> responseInterceptors;
 
     public HttpClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
@@ -34,30 +29,40 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        HttpInterceptorManager interceptorManager = petty.getHttpInterceptorManager();
         if (msg instanceof HttpRequest) {
             HttpRequest httpRequest = (HttpRequest) msg;
             if (httpRequest.decoderResult().isSuccess()) {
+                HttpInterceptorManager interceptorManager = petty.getHttpInterceptorManager();
                 if (interceptorManager != null) {
-                    HttpRequestInterceptor interceptor = interceptorManager.matchRequestInterceptor(httpRequest);
-                    if (interceptor != null) {
-                        this.httpRequest = httpRequest;
-                        interceptor.preHandle(ctx.channel(), httpRequest);
+                    if (requestInterceptors == null) {
+                        requestInterceptors = interceptorManager.matchRequestInterceptor(httpRequest);
+                    }
+                    if (responseInterceptors == null) {
+                        responseInterceptors = interceptorManager.matchResponseInterceptor(httpRequest);
+                        if (!responseInterceptors.isEmpty()) {
+                            this.httpRequest = httpRequest;
+                            if (state == State.READY) {
+                                ChannelPipeline pipeline = relayChannel.pipeline();
+                                pipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
+                            }
+                        }
+                    }
+                    for (HttpRequestInterceptor interceptor = requestInterceptors.peek(); interceptor != null; interceptor = requestInterceptors.peek()) {
+                        if (interceptor.preHandle(ctx.channel(), httpRequest)) {
+                            requestInterceptors.poll();
+                        } else {
+                            return;
+                        }
                     }
                 }
                 handleHttpRequest(ctx, httpRequest);
+                requestInterceptors = null;
             } else {
                 release(ctx);
             }
         } else if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
             if (httpContent.decoderResult().isSuccess()) {
-                if (interceptorManager != null) {
-                    HttpRequestInterceptor interceptor = interceptorManager.matchRequestInterceptor(httpRequest);
-                    if (interceptor != null) {
-                        interceptor.preHandle(ctx.channel(), httpContent);
-                    }
-                }
                 handleHttpContent(ctx, httpContent);
             } else {
                 release(ctx);
@@ -73,6 +78,40 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
 
     public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) throws Exception {
         ctx.fireChannelRead(message);
+    }
+
+    @Override
+    public ChannelHandler newServerRelayHandler(PettyServer petty, Channel clientChannel, Channel serverChannel) {
+        if (responseInterceptors == null || responseInterceptors.isEmpty()) {
+            return super.newServerRelayHandler(petty, clientChannel, serverChannel);
+        } else {
+            ChannelPipeline pipeline = serverChannel.pipeline();
+            System.out.println(pipeline);
+            pipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
+
+            return new ServerRelayHandler(petty, clientChannel) {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    if (msg instanceof HttpResponse) {
+                        HttpResponse httpResponse = (HttpResponse) msg;
+                        for (HttpResponseInterceptor interceptor = responseInterceptors.peek(); interceptor != null; interceptor = responseInterceptors.peek()) {
+                            if (interceptor.preHandle(clientChannel, serverChannel, httpRequest, httpResponse)) {
+                                responseInterceptors.poll();
+                            } else {
+                                return;
+                            }
+                        }
+                        System.err.println("serverChannel: " + pipeline);
+                        super.channelRead(ctx, msg);
+                        pipeline.remove(HandlerNames.DECODER);
+                        responseInterceptors = null;
+                        System.err.println("serverChannel: " + pipeline);
+                    } else {
+                        super.channelRead(ctx, msg);
+                    }
+                }
+            };
+        }
     }
 
     public boolean authorize(ChannelHandlerContext ctx, Credentials credentials) {

@@ -1,7 +1,6 @@
 package io.github.aomsweet.petty.http;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
@@ -10,12 +9,10 @@ import io.netty.handler.codec.http.HttpResponse;
  */
 public interface HttpResponseInterceptor {
 
-    boolean match(HttpRequest httpRequest, HttpResponse httpResponse);
-
-    default void preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception {
+    default boolean match(HttpRequest httpRequest) {
+        return true;
     }
 
-    default void preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpContent httpContent) throws Exception {
-    }
+    boolean preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
 
 }

@@ -3,63 +3,42 @@ package io.github.aomsweet.petty.http;
 import io.github.aomsweet.petty.HandlerNames;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
 
 /**
  * @author aomsweet
  */
-public abstract class FullHttpRequestInterceptor implements HttpRequestInterceptor {
-
-    /**
-     * default max content length size is 8MB
-     */
-    private static final int DEFAULT_MAX_CONTENT_LENGTH = 1024 * 1024 * 8;
-
-    private int maxContentLength;
+public abstract class FullHttpRequestInterceptor extends FullHttpMessageInterceptor<FullHttpRequestInterceptor>
+    implements HttpRequestInterceptor {
 
     public FullHttpRequestInterceptor() {
-        this(DEFAULT_MAX_CONTENT_LENGTH);
+        super();
     }
 
     public FullHttpRequestInterceptor(int maxContentLength) {
-        this.maxContentLength = maxContentLength;
+        super(maxContentLength);
     }
 
     @Override
-    public final void preHandle(Channel clientChannel, HttpRequest httpRequest) throws Exception {
+    public final boolean preHandle(Channel clientChannel, HttpRequest httpRequest) throws Exception {
+        ChannelPipeline pipeline = clientChannel.pipeline();
         if (httpRequest instanceof FullHttpRequest) {
             FullHttpRequest fullHttpRequest = (FullHttpRequest) httpRequest;
-            if (fullHttpRequest.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                //TODO Why?
-                fullHttpRequest.content().markReaderIndex();
-                fullHttpRequest.content().retain();
-                fullHttpRequest.headers().set(HttpHeaderNames.CONTENT_LENGTH, fullHttpRequest.content().readableBytes());
-            }
-            ChannelPipeline pipeline = clientChannel.pipeline();
             pipeline.remove(HandlerNames.DECOMPRESS);
             pipeline.remove(HandlerNames.AGGREGATOR);
-            preHandle(clientChannel, fullHttpRequest);
-        } else if (match(httpRequest)) {
-            clientChannel.pipeline()
+            return preHandle(clientChannel, fullHttpRequest);
+        } else {
+            pipeline
                 .addAfter(HandlerNames.DECODER, HandlerNames.DECOMPRESS, new HttpContentDecompressor())
                 .addAfter(HandlerNames.DECOMPRESS, HandlerNames.AGGREGATOR, new HttpObjectAggregator(maxContentLength))
                 .fireChannelRead(httpRequest);
+            return false;
         }
     }
 
-    public abstract void preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception;
+    public abstract boolean preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception;
 
-    @Override
-    public final void preHandle(Channel clientChannel, HttpContent httpContent) throws Exception {
-
-    }
-
-    public int getMaxContentLength() {
-        return maxContentLength;
-    }
-
-    public FullHttpRequestInterceptor setMaxContentLength(int maxContentLength) {
-        this.maxContentLength = maxContentLength;
-        return this;
-    }
 }
