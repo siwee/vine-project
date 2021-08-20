@@ -49,11 +49,11 @@ public class DirectServerConnector implements ServerConnector {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
+                if (proxyHandler != null) {
+                    ch.pipeline().addLast(HandlerNames.PROXY, proxyHandler);
+                }
                 if (logger.isTraceEnabled()) {
                     ch.pipeline().addLast(new LoggingHandler(LogLevel.TRACE));
-                }
-                if (proxyHandler != null) {
-                    ch.pipeline().addLast(proxyHandler);
                 }
             }
         };
@@ -72,16 +72,26 @@ public class DirectServerConnector implements ServerConnector {
             EventLoop eventLoop = ctx.channel().eventLoop();
             Bootstrap bootstrap = bootstrap().clone(eventLoop);
 
+            ChannelFuture channelFuture;
             if (upstreamProxies.size() == 1) {
                 ProxyInfo proxyInfo = upstreamProxies.get(0);
                 ProxyHandler proxyHandler = proxyInfo.newProxyHandler();
                 ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
-                return bootstrap.handler(initHandler).connect(socketAddress);
+                channelFuture = bootstrap.handler(initHandler).connect(socketAddress);
             } else {
                 CompleteChannelPromise promise = new CompleteChannelPromise(eventLoop);
                 channelPromise(socketAddress, upstreamProxies.iterator(), bootstrap, promise);
-                return promise;
+                channelFuture = promise;
             }
+            return channelFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    ChannelPipeline pipeline = channelFuture.channel().pipeline();
+                    ChannelHandler channelHandler = pipeline.removeFirst();
+                    while (!(channelHandler instanceof ProxyHandler)) {
+                        channelHandler = pipeline.removeFirst();
+                    }
+                }
+            });
         }
     }
 
