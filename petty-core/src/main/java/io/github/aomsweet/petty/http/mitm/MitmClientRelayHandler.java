@@ -2,12 +2,14 @@ package io.github.aomsweet.petty.http.mitm;
 
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
+import io.github.aomsweet.petty.ServerRelayHandler;
 import io.github.aomsweet.petty.http.HttpClientRelayHandler;
+import io.github.aomsweet.petty.http.HttpResponseInterceptor;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -29,6 +31,40 @@ public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
     public MitmClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
         this.httpMessages = new ArrayDeque<>(4);
+    }
+
+    @Override
+    public ChannelHandler newServerRelayHandler(PettyServer petty, Channel clientChannel, Channel serverChannel) {
+        if (this.responseInterceptors == null) {
+            return super.newServerRelayHandler(petty, clientChannel, serverChannel);
+        } else {
+            ChannelPipeline serverPipeline = serverChannel.pipeline();
+            ChannelPipeline clientPipeline = clientChannel.pipeline();
+            serverPipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
+            if (clientPipeline.get(HandlerNames.RESPONSE_ENCODER) == null) {
+                clientPipeline.addLast(HandlerNames.RESPONSE_ENCODER, new HttpResponseEncoder());
+            }
+
+            return new ServerRelayHandler(petty, clientChannel) {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    if (msg instanceof HttpResponse) {
+                        HttpResponse httpResponse = (HttpResponse) msg;
+                        for (HttpResponseInterceptor interceptor = responseInterceptors.peek(); interceptor != null; interceptor = responseInterceptors.peek()) {
+                            if (interceptor.preHandle(clientChannel, serverChannel, currentHttpRequest, httpResponse)) {
+                                responseInterceptors.poll();
+                            } else {
+                                return;
+                            }
+                        }
+                        responseInterceptors = null;
+                        super.channelRead(ctx, msg);
+                    } else {
+                        super.channelRead(ctx, msg);
+                    }
+                }
+            };
+        }
     }
 
     @Override

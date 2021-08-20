@@ -19,9 +19,9 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
     public static final byte[] UNAUTHORIZED_RESPONSE = "HTTP/1.1 407 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Access to the staging site\"\r\n\r\n".getBytes();
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
-    HttpRequest httpRequest;
-    Queue<HttpRequestInterceptor> requestInterceptors;
-    Queue<HttpResponseInterceptor> responseInterceptors;
+    protected HttpRequest currentHttpRequest;
+    protected Queue<HttpRequestInterceptor> requestInterceptors;
+    protected Queue<HttpResponseInterceptor> responseInterceptors;
 
     public HttpClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
@@ -32,31 +32,10 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
         if (msg instanceof HttpRequest) {
             HttpRequest httpRequest = (HttpRequest) msg;
             if (httpRequest.decoderResult().isSuccess()) {
-                HttpInterceptorManager interceptorManager = petty.getHttpInterceptorManager();
-                if (interceptorManager != null) {
-                    if (requestInterceptors == null) {
-                        requestInterceptors = interceptorManager.matchRequestInterceptor(httpRequest);
-                    }
-                    if (responseInterceptors == null) {
-                        responseInterceptors = interceptorManager.matchResponseInterceptor(httpRequest);
-                        if (!responseInterceptors.isEmpty()) {
-                            this.httpRequest = httpRequest;
-                            if (state == State.READY) {
-                                ChannelPipeline pipeline = relayChannel.pipeline();
-                                pipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
-                            }
-                        }
-                    }
-                    for (HttpRequestInterceptor interceptor = requestInterceptors.peek(); interceptor != null; interceptor = requestInterceptors.peek()) {
-                        if (interceptor.preHandle(ctx.channel(), httpRequest)) {
-                            requestInterceptors.poll();
-                        } else {
-                            return;
-                        }
-                    }
+                if (!preHandle(ctx, httpRequest)) {
+                    return;
                 }
                 handleHttpRequest(ctx, httpRequest);
-                requestInterceptors = null;
             } else {
                 release(ctx);
             }
@@ -72,46 +51,54 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
         }
     }
 
+    private boolean preHandle(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception {
+        HttpInterceptorManager interceptorManager = petty.getHttpInterceptorManager();
+        if (interceptorManager != null) {
+            if (requestInterceptors == null) {
+                requestInterceptors = interceptorManager.matchRequestInterceptor(httpRequest);
+            }
+            if (httpRequest.method() == HttpMethod.CONNECT) {
+                return true;
+            }
+            if (responseInterceptors == null) {
+                responseInterceptors = interceptorManager.matchResponseInterceptor(httpRequest);
+                if (responseInterceptors != null) {
+                    this.currentHttpRequest = httpRequest;
+
+                    // if (state == State.READY) {
+                    //     ChannelPipeline serverPipeline = relayChannel.pipeline();
+                    //     ChannelHandler relayHandler = serverPipeline.get(HandlerNames.RELAY);
+                    //     if (relayHandler.getClass() == ServerRelayHandler.class) {
+                    //         serverPipeline.replace(HandlerNames.RELAY, HandlerNames.RELAY, newServerRelayHandler(petty, ctx.channel(), relayChannel));
+                    //     } else {
+                    //         serverPipeline.addBefore(HandlerNames.RELAY, HandlerNames.DECODER, new HttpResponseDecoder());
+                    //         ctx.pipeline().addLast(HandlerNames.RESPONSE_ENCODER, new HttpResponseEncoder());
+                    //     }
+                    // }
+
+                }
+            }
+            if (requestInterceptors != null) {
+                for (HttpRequestInterceptor interceptor = requestInterceptors.peek();
+                     interceptor != null; interceptor = requestInterceptors.peek()) {
+                    if (interceptor.preHandle(ctx.channel(), httpRequest)) {
+                        requestInterceptors.poll();
+                    } else {
+                        return false;
+                    }
+                }
+                requestInterceptors = null;
+            }
+        }
+        return true;
+    }
+
     public abstract void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception;
 
     public abstract void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) throws Exception;
 
     public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) throws Exception {
         ctx.fireChannelRead(message);
-    }
-
-    @Override
-    public ChannelHandler newServerRelayHandler(PettyServer petty, Channel clientChannel, Channel serverChannel) {
-        if (responseInterceptors == null || responseInterceptors.isEmpty()) {
-            return super.newServerRelayHandler(petty, clientChannel, serverChannel);
-        } else {
-            ChannelPipeline pipeline = serverChannel.pipeline();
-            System.out.println(pipeline);
-            pipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
-
-            return new ServerRelayHandler(petty, clientChannel) {
-                @Override
-                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                    if (msg instanceof HttpResponse) {
-                        HttpResponse httpResponse = (HttpResponse) msg;
-                        for (HttpResponseInterceptor interceptor = responseInterceptors.peek(); interceptor != null; interceptor = responseInterceptors.peek()) {
-                            if (interceptor.preHandle(clientChannel, serverChannel, httpRequest, httpResponse)) {
-                                responseInterceptors.poll();
-                            } else {
-                                return;
-                            }
-                        }
-                        System.err.println("serverChannel: " + pipeline);
-                        super.channelRead(ctx, msg);
-                        pipeline.remove(HandlerNames.DECODER);
-                        responseInterceptors = null;
-                        System.err.println("serverChannel: " + pipeline);
-                    } else {
-                        super.channelRead(ctx, msg);
-                    }
-                }
-            };
-        }
     }
 
     public boolean authorize(ChannelHandlerContext ctx, Credentials credentials) {

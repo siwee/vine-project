@@ -28,6 +28,15 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
     }
 
     @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (state == State.READY && petty.getHttpInterceptorManager() == null) {
+            relay(ctx, msg);
+        } else {
+            channelRead0(ctx, msg);
+        }
+    }
+
+    @Override
     public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
         if (HttpMethod.CONNECT.equals(request.method())) {
             this.serverAddress = resolveServerAddress(request);

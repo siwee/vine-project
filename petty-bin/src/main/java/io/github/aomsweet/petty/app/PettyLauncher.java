@@ -13,6 +13,7 @@ import io.github.aomsweet.petty.app.logback.LogbackConfigurator;
 import io.github.aomsweet.petty.http.FullHttpRequestInterceptor;
 import io.github.aomsweet.petty.http.FullHttpResponseInterceptor;
 import io.github.aomsweet.petty.http.HttpInterceptorManager;
+import io.github.aomsweet.petty.http.mitm.BouncyCastleSelfSignedMitmManager;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -48,9 +49,9 @@ public class PettyLauncher {
             // .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
             // .withUpstreamProxy(() -> new HttpProxyHandler(new InetSocketAddress("localhost", 7890)))
             // .withUpstreamProxy(ProxyType.SOCKS5, "127.0.0.1", 7890)
-            .withUpstreamProxyManager((request, credentials, clientAddress, serverAddress) ->
-                List.of(new ProxyInfo(ProxyType.HTTP, "127.0.0.1", 8888)))
-            // .withMitmManager(new BouncyCastleSelfSignedMitmManager())
+            // .withUpstreamProxyManager((request, credentials, clientAddress, serverAddress) ->
+            //     List.of(new ProxyInfo(ProxyType.HTTP, "127.0.0.1", 8888)))
+            .withMitmManager(new BouncyCastleSelfSignedMitmManager())
             .withHttpInterceptorManager(new HttpInterceptorManager()
                 .addInterceptor(new FullHttpRequestInterceptor() {
                     @Override

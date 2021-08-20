@@ -12,8 +12,6 @@ public class HttpInterceptorManager {
     List<HttpRequestInterceptor> httpRequestInterceptors;
     List<HttpResponseInterceptor> httpResponseInterceptors;
 
-    Queue emptyQueue = new ArrayDeque<>(0);
-
     public HttpInterceptorManager addInterceptor(HttpRequestInterceptor interceptor) {
         Objects.requireNonNull(interceptor);
         if (httpRequestInterceptors == null) {
@@ -45,7 +43,7 @@ public class HttpInterceptorManager {
                 queue.offer(httpRequestInterceptor);
             }
         }
-        return queue == null ? emptyQueue : queue;
+        return queue;
     }
 
     public Queue<HttpResponseInterceptor> matchResponseInterceptor(HttpRequest httpRequest) {
@@ -61,6 +59,6 @@ public class HttpInterceptorManager {
                 queue.offer(httpResponseInterceptor);
             }
         }
-        return queue == null ? emptyQueue : queue;
+        return queue;
     }
 }
