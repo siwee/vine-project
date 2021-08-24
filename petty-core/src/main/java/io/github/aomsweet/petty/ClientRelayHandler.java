@@ -46,10 +46,15 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
             : connector.channel(serverAddress, ctx, proxyHandlers);
         channelFuture.addListener(future -> {
             if (future.isSuccess()) {
-                state = State.CONNECTED;
-                relayChannel = channelFuture.channel();
-                if (clientChannel.isActive()) {
-                    onConnected(ctx, clientChannel, request);
+                try {
+                    state = State.CONNECTED;
+                    relayChannel = channelFuture.channel();
+                    if (clientChannel.isActive()) {
+                        onConnected(ctx, clientChannel, request);
+                    }
+                } catch (Exception e) {
+                    logger.error("{}: {}", e.getClass().getName(), e.getMessage(), e);
+                    release(ctx);
                 }
             } else {
                 logger.error("Unable to establish a remote connection.", future.cause());
