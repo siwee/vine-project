@@ -58,19 +58,17 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         });
     }
 
-    public void relayReady(ChannelHandlerContext ctx) {
+    public void doServerRelay(ChannelHandlerContext ctx) {
         if (relayChannel.isActive()) {
-            relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(petty, ctx.channel(), relayChannel));
+            relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(ctx));
             state = State.READY;
-            // System.err.println("client: " + ctx.pipeline());
-            // System.err.println("server: " + relayChannel.pipeline());
         } else {
             release(ctx);
         }
     }
 
-    public ChannelHandler newServerRelayHandler(PettyServer petty, Channel clientChannel, Channel serverChannel) {
-        return new ServerRelayHandler(petty, clientChannel);
+    public ChannelHandler newServerRelayHandler(ChannelHandlerContext ctx) {
+        return new ServerRelayHandler(petty, ctx.channel());
     }
 
     protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception;

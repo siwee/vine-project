@@ -49,15 +49,17 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
             ctx.pipeline().addFirst(HandlerNames.SSL, sslContext.newHandler(ctx.alloc()));
 
             doConnectServer(ctx, ctx.channel(), request);
+        } else if (state == State.READY) {
+            relay(ctx, request);
         } else {
             httpMessages.offer(request);
         }
     }
 
     @Override
-    public void relayReady(ChannelHandlerContext ctx) {
+    public void doServerRelay(ChannelHandlerContext ctx) {
         if (sslHandshakeCompleted) {
-            super.relayReady(ctx);
+            super.doServerRelay(ctx);
         }
     }
 
@@ -65,6 +67,8 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
     public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
         if (sslHandshakeCompleted) {
             httpMessages.offer(httpContent);
+        } else if (state == State.READY) {
+            relay(ctx, httpContent);
         } else {
             ReferenceCountUtil.release(httpContent);
         }
@@ -76,7 +80,7 @@ public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
                 if (state == State.CONNECTED) {
-                    super.relayReady(ctx);
+                    super.doServerRelay(ctx);
                 }
             }
         }

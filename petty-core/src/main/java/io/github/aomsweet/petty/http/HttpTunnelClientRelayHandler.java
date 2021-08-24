@@ -41,7 +41,7 @@ public class HttpTunnelClientRelayHandler extends HttpClientRelayHandler {
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
         ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE)).addListener(future -> {
             if (future.isSuccess()) {
-                relayReady(ctx);
+                doServerRelay(ctx);
             }
         });
     }

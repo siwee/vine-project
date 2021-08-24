@@ -48,7 +48,7 @@ public class HttpTunnelDuplexClientRelayHandler extends HttpClientRelayHandler {
 
     @Override
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        relayReady(ctx);
+        doServerRelay(ctx);
         if (clientHello != null) {
             relayChannel.writeAndFlush(clientHello);
             clientHello = null;

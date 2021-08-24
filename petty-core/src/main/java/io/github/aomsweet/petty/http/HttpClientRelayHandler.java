@@ -1,9 +1,14 @@
 package io.github.aomsweet.petty.http;
 
-import io.github.aomsweet.petty.*;
+import io.github.aomsweet.petty.ClientRelayHandler;
+import io.github.aomsweet.petty.PettyServer;
+import io.github.aomsweet.petty.ProxyAuthenticator;
+import io.github.aomsweet.petty.ResolveServerAddressException;
 import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 import io.netty.util.internal.logging.InternalLogger;
 
@@ -19,7 +24,7 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
     public static final byte[] UNAUTHORIZED_RESPONSE = "HTTP/1.1 407 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Access to the staging site\"\r\n\r\n".getBytes();
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
-    protected HttpRequest currentHttpRequest;
+    protected HttpRequest currentRequest;
     protected Queue<HttpRequestInterceptor> requestInterceptors;
     protected Queue<HttpResponseInterceptor> responseInterceptors;
 
@@ -57,27 +62,7 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
             if (requestInterceptors == null) {
                 requestInterceptors = interceptorManager.matchRequestInterceptor(httpRequest);
             }
-            if (httpRequest.method() == HttpMethod.CONNECT) {
-                return true;
-            }
-            if (responseInterceptors == null) {
-                responseInterceptors = interceptorManager.matchResponseInterceptor(httpRequest);
-                if (responseInterceptors != null) {
-                    this.currentHttpRequest = httpRequest;
 
-                    // if (state == State.READY) {
-                    //     ChannelPipeline serverPipeline = relayChannel.pipeline();
-                    //     ChannelHandler relayHandler = serverPipeline.get(HandlerNames.RELAY);
-                    //     if (relayHandler.getClass() == ServerRelayHandler.class) {
-                    //         serverPipeline.replace(HandlerNames.RELAY, HandlerNames.RELAY, newServerRelayHandler(petty, ctx.channel(), relayChannel));
-                    //     } else {
-                    //         serverPipeline.addBefore(HandlerNames.RELAY, HandlerNames.DECODER, new HttpResponseDecoder());
-                    //         ctx.pipeline().addLast(HandlerNames.RESPONSE_ENCODER, new HttpResponseEncoder());
-                    //     }
-                    // }
-
-                }
-            }
             if (requestInterceptors != null) {
                 for (HttpRequestInterceptor interceptor = requestInterceptors.peek();
                      interceptor != null; interceptor = requestInterceptors.peek()) {
@@ -88,6 +73,16 @@ public abstract class HttpClientRelayHandler extends ClientRelayHandler<HttpRequ
                     }
                 }
                 requestInterceptors = null;
+            }
+
+            if (httpRequest.method() == HttpMethod.CONNECT) {
+                return true;
+            }
+            if (responseInterceptors == null) {
+                responseInterceptors = interceptorManager.matchResponseInterceptor(httpRequest);
+                if (responseInterceptors != null) {
+                    this.currentRequest = httpRequest;
+                }
             }
         }
         return true;

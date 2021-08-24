@@ -90,7 +90,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
                 ChannelPipeline pipeline = clientChannel.pipeline();
                 pipeline.remove(HandlerNames.DECODER);
                 pipeline.remove(Socks5ServerEncoder.DEFAULT);
-                relayReady(ctx);
+                doServerRelay(ctx);
             }
         });
     }

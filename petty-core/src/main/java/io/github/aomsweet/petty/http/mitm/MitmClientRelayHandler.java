@@ -34,40 +34,6 @@ public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
     }
 
     @Override
-    public ChannelHandler newServerRelayHandler(PettyServer petty, Channel clientChannel, Channel serverChannel) {
-        if (this.responseInterceptors == null) {
-            return super.newServerRelayHandler(petty, clientChannel, serverChannel);
-        } else {
-            ChannelPipeline serverPipeline = serverChannel.pipeline();
-            ChannelPipeline clientPipeline = clientChannel.pipeline();
-            serverPipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
-            if (clientPipeline.get(HandlerNames.RESPONSE_ENCODER) == null) {
-                clientPipeline.addLast(HandlerNames.RESPONSE_ENCODER, new HttpResponseEncoder());
-            }
-
-            return new ServerRelayHandler(petty, clientChannel) {
-                @Override
-                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                    if (msg instanceof HttpResponse) {
-                        HttpResponse httpResponse = (HttpResponse) msg;
-                        for (HttpResponseInterceptor interceptor = responseInterceptors.peek(); interceptor != null; interceptor = responseInterceptors.peek()) {
-                            if (interceptor.preHandle(clientChannel, serverChannel, currentHttpRequest, httpResponse)) {
-                                responseInterceptors.poll();
-                            } else {
-                                return;
-                            }
-                        }
-                        responseInterceptors = null;
-                        super.channelRead(ctx, msg);
-                    } else {
-                        super.channelRead(ctx, msg);
-                    }
-                }
-            };
-        }
-    }
-
-    @Override
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) throws Exception {
         ChannelPipeline pipeline = relayChannel.pipeline();
         if (isSsl) {
@@ -76,7 +42,12 @@ public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
                 serverAddress.getHostName(), serverAddress.getPort()));
         }
         pipeline.addLast(HandlerNames.REQUEST_ENCODER, new HttpRequestEncoder());
-        relayReady(ctx);
+        doServerRelay(ctx);
+    }
+
+    @Override
+    public void doServerRelay(ChannelHandlerContext ctx) {
+        super.doServerRelay(ctx);
         for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
             relayChannel.writeAndFlush(message);
         }
@@ -88,6 +59,50 @@ public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
             ReferenceCountUtil.release(message);
         }
         super.destroy(ctx);
+    }
+
+    @Override
+    public ChannelHandler newServerRelayHandler(ChannelHandlerContext ctx) {
+        if (petty.getHttpInterceptorManager() == null) {
+            return new ServerRelayHandler(petty, ctx.channel());
+        } else {
+            return newInterceptedServerRelayHandler(ctx);
+        }
+    }
+
+    protected ChannelHandler newInterceptedServerRelayHandler(ChannelHandlerContext ctx) {
+        Channel clientChannel = ctx.channel();
+        Channel serverChannel = relayChannel;
+        ChannelPipeline clientPipeline = clientChannel.pipeline();
+        ChannelPipeline serverPipeline = serverChannel.pipeline();
+
+        serverPipeline.addLast(HandlerNames.DECODER, new HttpResponseDecoder());
+        if (clientPipeline.get(HandlerNames.RESPONSE_ENCODER) == null) {
+            clientPipeline.addLast(HandlerNames.RESPONSE_ENCODER, new HttpResponseEncoder());
+        }
+
+        return new ServerRelayHandler(petty, clientChannel) {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (responseInterceptors == null) {
+                    super.channelRead(ctx, msg);
+                } else if (msg instanceof HttpResponse) {
+                    HttpResponse httpResponse = (HttpResponse) msg;
+                    for (HttpResponseInterceptor interceptor = responseInterceptors.peek(); interceptor != null; interceptor = responseInterceptors.peek()) {
+                        if (interceptor.preHandle(clientChannel, serverChannel, currentRequest, httpResponse)) {
+                            responseInterceptors.poll();
+                        } else {
+                            return;
+                        }
+                    }
+                    currentRequest = null;
+                    responseInterceptors = null;
+                    super.channelRead(ctx, msg);
+                } else {
+                    super.channelRead(ctx, msg);
+                }
+            }
+        };
     }
 
     public SslContext getClientSslContext() throws SSLException {
