@@ -16,17 +16,17 @@ import java.util.List;
 /**
  * @author aomsweet
  */
-public class DirectServerConnector implements ServerConnector {
+public class DefaultServerConnector implements ServerConnector {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(DirectServerConnector.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(DefaultServerConnector.class);
 
     Bootstrap bootstrap;
 
-    public DirectServerConnector() {
+    public DefaultServerConnector() {
         this.bootstrap = bootstrap();
     }
 
-    public DirectServerConnector(Bootstrap bootstrap) {
+    public DefaultServerConnector(Bootstrap bootstrap) {
         this.bootstrap = bootstrap;
     }
 
@@ -117,7 +117,7 @@ public class DirectServerConnector implements ServerConnector {
         return bootstrap;
     }
 
-    public DirectServerConnector setBootstrap(Bootstrap bootstrap) {
+    public DefaultServerConnector setBootstrap(Bootstrap bootstrap) {
         this.bootstrap = bootstrap;
         return this;
     }

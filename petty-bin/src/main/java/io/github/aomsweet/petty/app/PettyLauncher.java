@@ -6,13 +6,11 @@ import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
 import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ProxyInfo;
-import io.github.aomsweet.petty.ProxyType;
 import io.github.aomsweet.petty.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.petty.app.logback.LogbackConfigurator;
-import io.github.aomsweet.petty.http.FullHttpRequestInterceptor;
-import io.github.aomsweet.petty.http.FullHttpResponseInterceptor;
-import io.github.aomsweet.petty.http.HttpInterceptorManager;
+import io.github.aomsweet.petty.http.interceptor.FullHttpRequestInterceptor;
+import io.github.aomsweet.petty.http.interceptor.FullHttpResponseInterceptor;
+import io.github.aomsweet.petty.http.interceptor.HttpInterceptorManager;
 import io.github.aomsweet.petty.http.mitm.BouncyCastleSelfSignedMitmManager;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -24,7 +22,6 @@ import sun.misc.Signal;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
-import java.util.List;
 
 /**
  * @author aomsweet

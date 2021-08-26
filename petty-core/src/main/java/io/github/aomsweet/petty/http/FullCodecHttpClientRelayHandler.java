@@ -1,10 +1,9 @@
-package io.github.aomsweet.petty.http.mitm;
+package io.github.aomsweet.petty.http;
 
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
 import io.github.aomsweet.petty.ServerRelayHandler;
-import io.github.aomsweet.petty.http.HttpClientRelayHandler;
-import io.github.aomsweet.petty.http.HttpResponseInterceptor;
+import io.github.aomsweet.petty.http.interceptor.HttpResponseInterceptor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,12 +22,12 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public abstract class MitmClientRelayHandler extends HttpClientRelayHandler {
+public abstract class FullCodecHttpClientRelayHandler extends BasicHttpClientRelayHandler {
 
-    boolean isSsl;
-    Queue<Object> httpMessages;
+    protected boolean isSsl;
+    protected Queue<Object> httpMessages;
 
-    public MitmClientRelayHandler(PettyServer petty, InternalLogger logger) {
+    public FullCodecHttpClientRelayHandler(PettyServer petty, InternalLogger logger) {
         super(petty, logger);
         this.httpMessages = new ArrayDeque<>(4);
     }

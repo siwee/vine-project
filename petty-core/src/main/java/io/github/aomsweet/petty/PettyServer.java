@@ -1,6 +1,6 @@
 package io.github.aomsweet.petty;
 
-import io.github.aomsweet.petty.http.HttpInterceptorManager;
+import io.github.aomsweet.petty.http.interceptor.HttpInterceptorManager;
 import io.github.aomsweet.petty.http.mitm.MitmManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -323,7 +323,7 @@ public class PettyServer implements Closeable {
                 petty.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
             }
             if (petty.connector == null) {
-                petty.connector = new DirectServerConnector();
+                petty.connector = new DefaultServerConnector();
             }
             if (petty.preBoundAddress == null) {
                 petty.preBoundAddress = new InetSocketAddress("127.0.0.1", 2228);

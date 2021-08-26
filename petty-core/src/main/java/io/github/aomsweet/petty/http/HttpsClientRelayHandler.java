@@ -1,7 +1,8 @@
-package io.github.aomsweet.petty.http.mitm;
+package io.github.aomsweet.petty.http;
 
 import io.github.aomsweet.petty.HandlerNames;
 import io.github.aomsweet.petty.PettyServer;
+import io.github.aomsweet.petty.http.mitm.MitmManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
@@ -16,13 +17,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class HttpsMitmClientRelayHandler extends MitmClientRelayHandler {
+public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsMitmClientRelayHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsClientRelayHandler.class);
 
     boolean sslHandshakeCompleted;
 
-    public HttpsMitmClientRelayHandler(PettyServer petty) {
+    public HttpsClientRelayHandler(PettyServer petty) {
         super(petty, logger);
         this.isSsl = true;
     }

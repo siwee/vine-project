@@ -1,4 +1,4 @@
-package io.github.aomsweet.petty.http;
+package io.github.aomsweet.petty.http.interceptor;
 
 import io.github.aomsweet.petty.HandlerNames;
 import io.netty.channel.Channel;
