@@ -1,4 +1,4 @@
-package io.github.aomsweet.petty.auth;
+package io.github.aomsweet.petty;
 
 /**
  * @author aomsweet

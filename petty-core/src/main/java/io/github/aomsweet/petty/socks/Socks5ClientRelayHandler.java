@@ -1,10 +1,6 @@
 package io.github.aomsweet.petty.socks;
 
-import io.github.aomsweet.petty.ClientRelayHandler;
-import io.github.aomsweet.petty.HandlerNames;
-import io.github.aomsweet.petty.PettyServer;
-import io.github.aomsweet.petty.ProxyAuthenticator;
-import io.github.aomsweet.petty.auth.Credentials;
+import io.github.aomsweet.petty.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -57,13 +53,9 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
     }
 
     protected void authRequestHandler(ChannelHandlerContext ctx, Socks5PasswordAuthRequest authRequest, ChannelPipeline pipeline) {
-        String username = authRequest.username();
-        String password = authRequest.password();
-        if (petty.getUpstreamProxyManager() != null) {
-            credentials = new Credentials(username, password);
-        }
+        credentials = new Credentials(authRequest.username(), authRequest.password());
         ProxyAuthenticator proxyAuthenticator = petty.getProxyAuthenticator();
-        if (proxyAuthenticator == null || proxyAuthenticator.authenticate(username, password)) {
+        if (proxyAuthenticator == null || proxyAuthenticator.authenticate(authRequest.username(), authRequest.password())) {
             pipeline.replace(HandlerNames.DECODER, HandlerNames.DECODER, new Socks5CommandRequestDecoder());
             ctx.writeAndFlush(AUTH_SUCCESS).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         } else {

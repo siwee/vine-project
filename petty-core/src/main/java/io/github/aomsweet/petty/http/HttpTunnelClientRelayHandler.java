@@ -14,16 +14,16 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class HttpTunnelRelayHandler extends BasicHttpClientRelayHandler {
+public class HttpTunnelClientRelayHandler extends BasicHttpClientRelayHandler {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelRelayHandler.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelClientRelayHandler.class);
 
     /**
      * tls client hello request
      */
     Object clientHello;
 
-    public HttpTunnelRelayHandler(PettyServer petty) {
+    public HttpTunnelClientRelayHandler(PettyServer petty) {
         super(petty, logger);
     }
 

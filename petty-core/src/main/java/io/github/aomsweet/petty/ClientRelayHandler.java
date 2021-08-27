@@ -1,6 +1,5 @@
 package io.github.aomsweet.petty;
 
-import io.github.aomsweet.petty.auth.Credentials;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -82,4 +81,13 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         release(ctx);
     }
 
+    public ClientRelayHandler<Q> setCredentials(Credentials credentials) {
+        this.credentials = credentials;
+        return this;
+    }
+
+    public ClientRelayHandler<Q> setServerAddress(InetSocketAddress serverAddress) {
+        this.serverAddress = serverAddress;
+        return this;
+    }
 }

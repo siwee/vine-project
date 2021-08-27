@@ -1,6 +1,6 @@
 package io.github.aomsweet.petty;
 
-import io.github.aomsweet.petty.http.HttpServerHandler;
+import io.github.aomsweet.petty.http.HttpAuthorizationHandler;
 import io.github.aomsweet.petty.socks.Socks4ClientRelayHandler;
 import io.github.aomsweet.petty.socks.Socks5ClientRelayHandler;
 import io.netty.buffer.ByteBuf;
@@ -27,11 +27,11 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PortUnificationServerHandler.class);
 
     PettyServer petty;
-    HttpServerHandler httpServerHandler;
+    HttpAuthorizationHandler httpAuthorizationHandler;
 
     public PortUnificationServerHandler(PettyServer petty) {
         this.petty = petty;
-        this.httpServerHandler = new HttpServerHandler(petty);
+        this.httpAuthorizationHandler = new HttpAuthorizationHandler(petty);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class PortUnificationServerHandler extends ChannelInboundHandlerAdapter {
                 pipeline.addLast(HandlerNames.RELAY, new Socks5ClientRelayHandler(petty));
             } else {
                 pipeline.addLast(HandlerNames.DECODER, new HttpRequestDecoder());
-                pipeline.addLast(httpServerHandler);
+                pipeline.addLast(httpAuthorizationHandler);
             }
             pipeline.fireChannelRead(msg);
         } else {
