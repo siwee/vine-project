@@ -60,8 +60,8 @@ public class SelfSignedMitmManager implements MitmManager {
 
     private void loadRootCertificate() throws Exception {
         ClassLoader cl = this.getClass().getClassLoader();
-        try (InputStream certInputStream = cl.getResourceAsStream("petty/cert/ca.crt");
-             InputStream keyInputStream = cl.getResourceAsStream("petty/cert/ca_private.key")) {
+        try (InputStream certInputStream = cl.getResourceAsStream("io/github/aomsweet/petty/http/mitm/cert/PETTY_CERT.DER");
+             InputStream keyInputStream = cl.getResourceAsStream("io/github/aomsweet/petty/http/mitm/cert/PRIVATE.KEY")) {
             loadRootCertificate(certInputStream, keyInputStream);
         }
     }
