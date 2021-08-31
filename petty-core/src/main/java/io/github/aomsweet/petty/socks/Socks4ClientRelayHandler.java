@@ -12,6 +12,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
+/**
+ * @author aomsweet
+ */
 public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4CommandRequest> {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks4ClientRelayHandler.class);
@@ -41,19 +44,15 @@ public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4Com
 
     @Override
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
-        clientChannel.writeAndFlush(SUCCESS_RESPONSE).addListener(future -> {
-            if (future.isSuccess()) {
-                ChannelPipeline pipeline = clientChannel.pipeline();
-                pipeline.remove(HandlerNames.DECODER);
-                pipeline.remove(Socks4ServerEncoder.INSTANCE);
-                doServerRelay(ctx);
-            }
-        });
+        clientChannel.writeAndFlush(SUCCESS_RESPONSE);
+        ChannelPipeline pipeline = clientChannel.pipeline();
+        pipeline.remove(HandlerNames.DECODER);
+        pipeline.remove(Socks4ServerEncoder.INSTANCE);
+        doServerRelay(ctx);
     }
 
     @Override
     protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
-        ctx.writeAndFlush(REJECTED_OR_FAILED_RESPONSE);
-        release(ctx);
+        ctx.writeAndFlush(REJECTED_OR_FAILED_RESPONSE).addListener(future -> release(ctx));
     }
 }

@@ -11,6 +11,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
+/**
+ * @author aomsweet
+ */
 public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5CommandRequest> {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(Socks5ClientRelayHandler.class);
@@ -77,20 +80,16 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
     protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
             request.dstAddrType(), request.dstAddr(), request.dstPort());
-        ctx.writeAndFlush(response).addListener(future -> {
-            if (future.isSuccess()) {
-                ChannelPipeline pipeline = clientChannel.pipeline();
-                pipeline.remove(HandlerNames.DECODER);
-                pipeline.remove(Socks5ServerEncoder.DEFAULT);
-                doServerRelay(ctx);
-            }
-        });
+        ctx.writeAndFlush(response);
+        ChannelPipeline pipeline = clientChannel.pipeline();
+        pipeline.remove(HandlerNames.DECODER);
+        pipeline.remove(Socks5ServerEncoder.DEFAULT);
+        doServerRelay(ctx);
     }
 
     @Override
     protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, request.dstAddrType());
-        ctx.writeAndFlush(response);
-        release(ctx);
+        ctx.writeAndFlush(response).addListener(future -> release(ctx));
     }
 }
