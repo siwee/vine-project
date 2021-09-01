@@ -1,4 +1,4 @@
-# petty
+# cyber
 
 An asynchronous network proxy based on `netty`. Support `HTTP`/`SOCKS4`/`SOCKS5` proxy protocol on one port.
 

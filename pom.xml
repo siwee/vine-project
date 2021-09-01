@@ -5,16 +5,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.aomsweet</groupId>
-    <artifactId>petty-parent</artifactId>
+    <artifactId>cyber-parent</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>petty-bin</module>
-        <module>petty-core</module>
-        <module>petty-bouncycastle</module>
+        <module>cyber-bin</module>
+        <module>cyber-core</module>
+        <module>cyber-bouncycastle</module>
     </modules>
 
-    <name>petty-parent</name>
+    <name>cyber-parent</name>
     <url>https://aomsweet.github.io</url>
 
     <properties>
@@ -36,13 +36,13 @@
         <dependencies>
             <dependency>
                 <groupId>io.github.aomsweet</groupId>
-                <artifactId>petty-core</artifactId>
+                <artifactId>cyber-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.github.aomsweet</groupId>
-                <artifactId>petty-bouncycastle</artifactId>
+                <artifactId>cyber-bouncycastle</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
