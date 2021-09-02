@@ -2,19 +2,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>cyber-parent</artifactId>
-        <groupId>io.github.aomsweet</groupId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <groupId>io.github.aomsweet</groupId>
     <artifactId>cyber-bin</artifactId>
+    <version>1.0.0.alpha1-SNAPSHOT</version>
 
     <properties>
         <exec.mainClass>io.github.aomsweet.cyber.app.CyberLauncher</exec.mainClass>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+
+        <cyber.version>1.0.0.alpha1-SNAPSHOT</cyber.version>
+        <graalvm.version>21.2.0</graalvm.version>
+        <logback.version>1.3.0-alpha10</logback.version>
+        <jansi.version>2.3.4</jansi.version>
     </properties>
 
     <dependencies>
@@ -23,27 +25,32 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.fusesource.jansi/jansi -->
         <dependency>
             <groupId>org.fusesource.jansi</groupId>
             <artifactId>jansi</artifactId>
+            <version>${jansi.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.github.aomsweet</groupId>
             <artifactId>cyber-core</artifactId>
+            <version>${cyber.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.github.aomsweet</groupId>
             <artifactId>cyber-bouncycastle</artifactId>
+            <version>${cyber.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
+            <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -51,6 +58,7 @@
         <dependency>
             <groupId>org.graalvm.nativeimage</groupId>
             <artifactId>svm</artifactId>
+            <version>${graalvm.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -62,7 +70,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.0</version>
                 <configuration>
                     <excludes>
                         <exclude>logback-test.xml</exclude>
