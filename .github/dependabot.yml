@@ -5,7 +5,7 @@ updates:
         schedule:
             interval: daily
             time: "09:00"
-            timezone: Etc/GMT+8
+            timezone: Etc/GMT-8
         open-pull-requests-limit: 10
         labels:
             - area/dependencies
