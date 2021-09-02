@@ -1,20 +1,41 @@
-# cyber
+# Cyber Project
 
-An asynchronous network proxy based on `netty`. Support `HTTP`/`SOCKS4`/`SOCKS5` proxy protocol on one port.
+High-performance proxy library based on Netty. Support socks/http mixed protocol, upstream proxy, MITM, intercept and tamper with https traffic.
 
 ## Features
 
 - [x] HTTP
-- [x] HTTP Tunnel
-- [ ] HTTP MITM
-- [x] SOCKS4
+- [x] SOCKS4/4a
 - [x] SOCKS5
-- [ ] Username/password authentication
-- [ ] GSSAPI authentication
-- [ ] Chain proxies
-- [ ] Http interceptor
+- [x] Username/password authentication
+- [x] Chained Upstream proxies
+- [x] Http interceptor
 - [ ] Rate monitor
+
+## Usage
+
+pom.xml
+```xml
+<dependency>
+  <groupId>io.github.aomsweet</groupId>
+  <artifactId>cyber-core</artifactId>
+  <version>1.0.0.alpha1</version>
+</dependency>
+```
+
+Demo.java
+```java
+public class Demo {
+
+    public static void main(String[] args) {
+        new CyberServer.Builder()
+            .withPort(2228)
+            .build().start();
+    }
+
+}
+```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](/LICENSE) file for details.
+This project is licensed under the Apache License(Version 2.0) - see the [LICENSE](/LICENSE) file for details.
