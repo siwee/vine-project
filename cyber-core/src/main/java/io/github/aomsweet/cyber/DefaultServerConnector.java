@@ -60,7 +60,7 @@ public class DefaultServerConnector implements ServerConnector {
         return channelInitializer(null);
     }
 
-    public ChannelInitializer<Channel> channelInitializer(ProxyHandler proxyHandler) {
+    public ChannelInitializer<Channel> channelInitializer(ChannelHandler proxyHandler) {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -89,7 +89,7 @@ public class DefaultServerConnector implements ServerConnector {
 
             if (upstreamProxies.size() == 1) {
                 ProxyInfo proxyInfo = upstreamProxies.get(0);
-                ProxyHandler proxyHandler = proxyInfo.newProxyHandler();
+                ChannelHandler proxyHandler = proxyInfo.newProxyHandler();
                 ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
                 return bootstrap.handler(initHandler).connect(socketAddress);
             } else {
@@ -105,7 +105,7 @@ public class DefaultServerConnector implements ServerConnector {
                                   Bootstrap bootstrap,
                                   CompleteChannelPromise promise) {
         ProxyInfo proxyInfo = upstreamProxies.next();
-        ProxyHandler proxyHandler = proxyInfo.newProxyHandler();
+        ChannelHandler proxyHandler = proxyInfo.newProxyHandler();
         ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
         bootstrap.handler(initHandler).connect(socketAddress).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
