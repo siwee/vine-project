@@ -15,14 +15,11 @@
  */
 package io.github.aomsweet.cyber;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.*;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
-import java.util.List;
+import java.util.Queue;
 
 /**
  * @author aomsweet
@@ -50,14 +47,25 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
     protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception {
         ServerConnector connector = cyber.getConnector();
         UpstreamProxyManager upstreamProxyManager = cyber.getUpstreamProxyManager();
-        List<ProxyInfo> proxyHandlers = null;
+        Queue<ProxyInfo> upstreamProxies = null;
         if (upstreamProxyManager != null) {
-            proxyHandlers = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
+            upstreamProxies = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
                 clientChannel.remoteAddress(), serverAddress);
         }
-        ChannelFuture channelFuture = proxyHandlers == null
-            ? connector.channel(serverAddress, ctx)
-            : connector.channel(serverAddress, ctx, proxyHandlers);
+
+        ChannelFuture channelFuture;
+        if (upstreamProxies == null || upstreamProxies.isEmpty()) {
+            channelFuture = connector.channel(serverAddress, ctx);
+        } else {
+            if (upstreamProxies.size() == 1) {
+                channelFuture = connector.channel(serverAddress, ctx, upstreamProxies.poll());
+            } else {
+                CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
+                doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
+                channelFuture = promise;
+            }
+        }
+
         channelFuture.addListener(future -> {
             if (future.isSuccess()) {
                 try {
@@ -73,6 +81,28 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
             } else {
                 logger.error("Unable to establish a remote connection.", future.cause());
                 this.onConnectFailed(ctx, clientChannel, request);
+            }
+        });
+    }
+
+    protected void doConnectServer(ChannelHandlerContext ctx,
+                                   ServerConnector connector,
+                                   Queue<ProxyInfo> upstreamProxies,
+                                   UpstreamProxyManager upstreamProxyManager,
+                                   CompleteChannelPromise promise) {
+        ProxyInfo proxyInfo = upstreamProxies.poll();
+        connector.channel(serverAddress, ctx, proxyInfo).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                promise.setChannel(future.channel()).setSuccess();
+            } else {
+                Throwable cause = future.cause();
+                upstreamProxyManager.exceptionCaught(proxyInfo, serverAddress, cause);
+                logger.warn("Connection failed.", cause);
+                if (upstreamProxies.peek() != null) {
+                    doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
+                } else {
+                    promise.setFailure(cause);
+                }
             }
         });
     }

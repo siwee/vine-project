@@ -17,7 +17,6 @@ package io.github.aomsweet.cyber;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 
@@ -35,7 +34,7 @@ public class ProxyInfo {
     private int port;
     private String username;
     private String password;
-    private long connectTimeoutMillis;
+
     private Supplier<ChannelHandler> proxyHandlerSupplier;
 
     public ProxyInfo(ProxyType proxyType, String host, int port) {

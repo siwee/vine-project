@@ -17,16 +17,18 @@ package io.github.aomsweet.cyber;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.List;
+import java.util.Queue;
 
 /**
  * @author aomsweet
  */
 public interface UpstreamProxyManager {
 
-    List<ProxyInfo> lookupUpstreamProxies(Object requestObject,
-                                          Credentials credentials,
-                                          SocketAddress clientAddress,
-                                          InetSocketAddress serverAddress) throws Exception;
+    Queue<ProxyInfo> lookupUpstreamProxies(Object requestObject,
+                                           Credentials credentials,
+                                           SocketAddress clientAddress,
+                                           InetSocketAddress serverAddress) throws Exception;
+
+    void exceptionCaught(ProxyInfo proxyInfo, InetSocketAddress serverAddress, Throwable throwable) throws Exception;
 
 }

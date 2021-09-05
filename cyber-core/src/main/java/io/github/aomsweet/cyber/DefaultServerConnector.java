@@ -20,13 +20,10 @@ import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * @author aomsweet
@@ -80,46 +77,14 @@ public class DefaultServerConnector implements ServerConnector {
     }
 
     @Override
-    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, List<ProxyInfo> upstreamProxies) {
-        if (upstreamProxies == null || upstreamProxies.isEmpty()) {
+    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, ProxyInfo upstreamProxy) {
+        if (upstreamProxy == null) {
             return channel(socketAddress, ctx);
         } else {
-            EventLoop eventLoop = ctx.channel().eventLoop();
-            Bootstrap bootstrap = bootstrap().clone(eventLoop);
-
-            if (upstreamProxies.size() == 1) {
-                ProxyInfo proxyInfo = upstreamProxies.get(0);
-                ChannelHandler proxyHandler = proxyInfo.newProxyHandler();
-                ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
-                return bootstrap.handler(initHandler).connect(socketAddress);
-            } else {
-                CompleteChannelPromise promise = new CompleteChannelPromise(eventLoop);
-                channelPromise(socketAddress, upstreamProxies.iterator(), bootstrap, promise);
-                return promise;
-            }
+            ChannelHandler proxyHandler = upstreamProxy.newProxyHandler();
+            ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
+            return bootstrap.clone(ctx.channel().eventLoop()).handler(initHandler).connect(socketAddress);
         }
-    }
-
-    protected void channelPromise(InetSocketAddress socketAddress,
-                                  Iterator<ProxyInfo> upstreamProxies,
-                                  Bootstrap bootstrap,
-                                  CompleteChannelPromise promise) {
-        ProxyInfo proxyInfo = upstreamProxies.next();
-        ChannelHandler proxyHandler = proxyInfo.newProxyHandler();
-        ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
-        bootstrap.handler(initHandler).connect(socketAddress).addListener((ChannelFutureListener) future -> {
-            if (future.isSuccess()) {
-                promise.setChannel(future.channel()).setSuccess();
-            } else {
-                Throwable cause = future.cause();
-                logger.warn("Connection failed.", cause);
-                if (upstreamProxies.hasNext()) {
-                    channelPromise(socketAddress, upstreamProxies, bootstrap, promise);
-                } else {
-                    promise.setFailure(cause);
-                }
-            }
-        });
     }
 
     /*
