@@ -6,14 +6,14 @@
 
     <groupId>io.github.aomsweet</groupId>
     <artifactId>cyber-bin</artifactId>
-    <version>1.0.0.alpha3-SNAPSHOT</version>
+    <version>1.0.0.alpha3</version>
 
     <properties>
         <exec.mainClass>io.github.aomsweet.cyber.app.CyberLauncher</exec.mainClass>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
 
-        <cyber.version>1.0.0.alpha3-SNAPSHOT</cyber.version>
+        <cyber.version>1.0.0.alpha3</cyber.version>
         <graalvm.version>21.2.0</graalvm.version>
         <logback.version>1.3.0-alpha10</logback.version>
         <jansi.version>2.3.4</jansi.version>
