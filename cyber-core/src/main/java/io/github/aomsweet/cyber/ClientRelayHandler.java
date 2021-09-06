@@ -47,7 +47,7 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
     protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception {
         ServerConnector connector = cyber.getConnector();
         UpstreamProxyManager upstreamProxyManager = cyber.getUpstreamProxyManager();
-        Queue<ProxyInfo> upstreamProxies = null;
+        Queue<? extends UpstreamProxy> upstreamProxies = null;
         if (upstreamProxyManager != null) {
             upstreamProxies = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
                 clientChannel.remoteAddress(), serverAddress);
@@ -57,15 +57,10 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         if (upstreamProxies == null || upstreamProxies.isEmpty()) {
             channelFuture = connector.channel(serverAddress, ctx);
         } else {
-            if (upstreamProxies.size() == 1) {
-                channelFuture = connector.channel(serverAddress, ctx, upstreamProxies.poll());
-            } else {
-                CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
-                doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
-                channelFuture = promise;
-            }
+            CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
+            doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
+            channelFuture = promise;
         }
-
         channelFuture.addListener(future -> {
             if (future.isSuccess()) {
                 try {
@@ -87,17 +82,19 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
     protected void doConnectServer(ChannelHandlerContext ctx,
                                    ServerConnector connector,
-                                   Queue<ProxyInfo> upstreamProxies,
+                                   Queue<? extends UpstreamProxy> upstreamProxies,
                                    UpstreamProxyManager upstreamProxyManager,
                                    CompleteChannelPromise promise) {
-        ProxyInfo proxyInfo = upstreamProxies.poll();
-        connector.channel(serverAddress, ctx, proxyInfo).addListener((ChannelFutureListener) future -> {
+        UpstreamProxy upstreamProxy = upstreamProxies.poll();
+        if (logger.isDebugEnabled()) {
+            logger.debug("Use upstream proxy: [{}]", upstreamProxy);
+        }
+        connector.channel(serverAddress, ctx, upstreamProxy).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
                 promise.setChannel(future.channel()).setSuccess();
             } else {
                 Throwable cause = future.cause();
-                upstreamProxyManager.exceptionCaught(proxyInfo, serverAddress, cause);
-                logger.warn("Connection failed.", cause);
+                upstreamProxyManager.failConnectExceptionCaught(upstreamProxy, serverAddress, cause);
                 if (upstreamProxies.peek() != null) {
                     doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
                 } else {

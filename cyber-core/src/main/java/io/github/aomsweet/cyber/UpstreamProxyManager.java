@@ -24,11 +24,11 @@ import java.util.Queue;
  */
 public interface UpstreamProxyManager {
 
-    Queue<ProxyInfo> lookupUpstreamProxies(Object requestObject,
-                                           Credentials credentials,
-                                           SocketAddress clientAddress,
-                                           InetSocketAddress serverAddress) throws Exception;
+    Queue<? extends UpstreamProxy> lookupUpstreamProxies(Object requestObject,
+                                                         Credentials credentials,
+                                                         SocketAddress clientAddress,
+                                                         InetSocketAddress serverAddress) throws Exception;
 
-    void exceptionCaught(ProxyInfo proxyInfo, InetSocketAddress serverAddress, Throwable throwable) throws Exception;
+    void failConnectExceptionCaught(UpstreamProxy upstreamProxy, InetSocketAddress serverAddress, Throwable throwable) throws Exception;
 
 }

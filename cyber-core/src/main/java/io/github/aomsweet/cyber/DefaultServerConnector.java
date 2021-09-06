@@ -77,7 +77,7 @@ public class DefaultServerConnector implements ServerConnector {
     }
 
     @Override
-    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, ProxyInfo upstreamProxy) {
+    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, UpstreamProxy upstreamProxy) {
         if (upstreamProxy == null) {
             return channel(socketAddress, ctx);
         } else {
