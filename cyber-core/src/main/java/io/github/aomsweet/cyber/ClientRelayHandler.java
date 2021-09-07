@@ -66,20 +66,22 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
             future = promise;
         }
         future.addListener(action -> {
-            if (action.isSuccess()) {
-                try {
-                    state = State.CONNECTED;
-                    relayChannel = future.channel();
+            try {
+                if (action.isSuccess()) {
                     if (clientChannel.isActive()) {
+                        state = State.CONNECTED;
+                        relayChannel = future.channel();
                         onConnected(ctx, clientChannel, request);
+                    } else {
+                        future.channel().close().addListener(ChannelFutureListener.CLOSE);
                     }
-                } catch (Exception e) {
-                    logger.error("{}: {}", e.getClass().getName(), e.getMessage(), e);
-                    close(ctx);
+                } else {
+                    logger.error("Unable to establish a remote connection.", action.cause());
+                    this.onConnectFailed(ctx, clientChannel, request);
                 }
-            } else {
-                logger.error("Unable to establish a remote connection.", action.cause());
-                this.onConnectFailed(ctx, clientChannel, request);
+            } catch (Exception e) {
+                logger.error("{}: {}", e.getClass().getName(), e.getMessage(), e);
+                close(ctx);
             }
         });
     }
