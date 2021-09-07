@@ -71,11 +71,11 @@ public class HttpTunnelClientRelayHandler extends BasicHttpClientRelayHandler {
     }
 
     @Override
-    public void destroy(ChannelHandlerContext ctx) {
+    public void release(ChannelHandlerContext ctx) {
         if (clientHello != null) {
             ReferenceCountUtil.release(clientHello);
             clientHello = null;
         }
-        super.destroy(ctx);
+        super.release(ctx);
     }
 }

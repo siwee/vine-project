@@ -50,7 +50,7 @@ public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4Com
                 doConnectServer(ctx, ctx.channel(), (Socks4CommandRequest) msg);
             } else {
                 logger.error("Unsupported Socks4 {} command.", request.type());
-                release(ctx);
+                close(ctx);
             }
         } else {
             ctx.fireChannelRead(msg);
@@ -68,6 +68,6 @@ public final class Socks4ClientRelayHandler extends ClientRelayHandler<Socks4Com
 
     @Override
     protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks4CommandRequest request) {
-        ctx.writeAndFlush(REJECTED_OR_FAILED_RESPONSE).addListener(future -> release(ctx));
+        ctx.writeAndFlush(REJECTED_OR_FAILED_RESPONSE).addListener(future -> close(ctx));
     }
 }

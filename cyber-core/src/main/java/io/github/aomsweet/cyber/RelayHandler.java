@@ -47,14 +47,14 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         if (logger.isDebugEnabled()) {
             logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
         }
-        release(ctx);
+        close(ctx);
     }
 
     public void relay(ChannelHandlerContext ctx, Object msg) {
         if (relayChannel.isActive()) {
             relayChannel.writeAndFlush(msg);
         } else {
-            release(ctx);
+            close(ctx);
             ReferenceCountUtil.release(msg);
         }
     }
@@ -70,18 +70,22 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         relayChannel.config().setAutoRead(isWritable);
     }
 
-    public final void release(ChannelHandlerContext ctx) {
-        if (state != State.RELEASED) {
-            destroy(ctx);
-            state = State.RELEASED;
+    public final void close(ChannelHandlerContext ctx) {
+        if (state != State.CLOSED) {
+            release(ctx);
+            releaseRelayChannel();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Channel released. {}", ctx.channel());
+            }
+            state = State.CLOSED;
         }
     }
 
-    protected void destroy(ChannelHandlerContext ctx) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Channel released. {}", ctx.channel());
-        }
-        ctx.close();
+    protected void release(ChannelHandlerContext ctx) {
+        ctx.channel().close();
+    }
+
+    protected void releaseRelayChannel() {
         if (relayChannel != null && relayChannel.isActive()) {
             relayChannel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
@@ -100,13 +104,13 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
                 logger.error("{}: {}", cause.getClass().getName(), cause.getMessage(), cause);
             }
         } finally {
-            release(ctx);
+            close(ctx);
         }
     }
 
     public enum State {
 
-        UNCONNECTED, CONNECTED, READY, RELEASED
+        UNCONNECTED, CONNECTED, READY, CLOSED
 
     }
 

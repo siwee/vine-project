@@ -24,13 +24,19 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public abstract class ClientRelayHandler<Q> extends RelayHandler {
+public abstract class ClientRelayHandler<R> extends RelayHandler {
 
     protected Credentials credentials;
+    protected UpstreamProxy upstreamProxy;
     protected InetSocketAddress serverAddress;
+
+    protected ChannelManager channelManager;
+    protected UpstreamProxyManager upstreamProxyManager;
 
     public ClientRelayHandler(CyberServer cyber, InternalLogger logger) {
         super(cyber, logger);
+        this.channelManager = cyber.channelManager;
+        this.upstreamProxyManager = cyber.upstreamProxyManager;
     }
 
     @Override
@@ -44,59 +50,56 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
 
     public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
 
-    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception {
-        ServerConnector connector = cyber.getConnector();
-        UpstreamProxyManager upstreamProxyManager = cyber.getUpstreamProxyManager();
+    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
         Queue<? extends UpstreamProxy> upstreamProxies = null;
         if (upstreamProxyManager != null) {
             upstreamProxies = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
                 clientChannel.remoteAddress(), serverAddress);
         }
 
-        ChannelFuture channelFuture;
+        ChannelFuture future;
         if (upstreamProxies == null || upstreamProxies.isEmpty()) {
-            channelFuture = connector.channel(serverAddress, ctx);
+            future = channelManager.acquire(serverAddress, ctx);
         } else {
             CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
-            doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
-            channelFuture = promise;
+            doConnectServer(ctx, upstreamProxies, promise);
+            future = promise;
         }
-        channelFuture.addListener(future -> {
-            if (future.isSuccess()) {
+        future.addListener(action -> {
+            if (action.isSuccess()) {
                 try {
                     state = State.CONNECTED;
-                    relayChannel = channelFuture.channel();
+                    relayChannel = future.channel();
                     if (clientChannel.isActive()) {
                         onConnected(ctx, clientChannel, request);
                     }
                 } catch (Exception e) {
                     logger.error("{}: {}", e.getClass().getName(), e.getMessage(), e);
-                    release(ctx);
+                    close(ctx);
                 }
             } else {
-                logger.error("Unable to establish a remote connection.", future.cause());
+                logger.error("Unable to establish a remote connection.", action.cause());
                 this.onConnectFailed(ctx, clientChannel, request);
             }
         });
     }
 
     protected void doConnectServer(ChannelHandlerContext ctx,
-                                   ServerConnector connector,
                                    Queue<? extends UpstreamProxy> upstreamProxies,
-                                   UpstreamProxyManager upstreamProxyManager,
                                    CompleteChannelPromise promise) {
         UpstreamProxy upstreamProxy = upstreamProxies.poll();
         if (logger.isDebugEnabled()) {
             logger.debug("Use upstream proxy: [{}]", upstreamProxy);
         }
-        connector.channel(serverAddress, ctx, upstreamProxy).addListener((ChannelFutureListener) future -> {
+        channelManager.acquire(serverAddress, upstreamProxy, ctx).addListener((ChannelFutureListener) future -> {
             if (future.isSuccess()) {
+                this.upstreamProxy = upstreamProxy;
                 promise.setChannel(future.channel()).setSuccess();
             } else {
                 Throwable cause = future.cause();
                 upstreamProxyManager.failConnectExceptionCaught(upstreamProxy, serverAddress, cause);
                 if (upstreamProxies.peek() != null) {
-                    doConnectServer(ctx, connector, upstreamProxies, upstreamProxyManager, promise);
+                    doConnectServer(ctx, upstreamProxies, promise);
                 } else {
                     promise.setFailure(cause);
                 }
@@ -109,7 +112,7 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
             relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(ctx));
             state = State.READY;
         } else {
-            release(ctx);
+            close(ctx);
         }
     }
 
@@ -117,18 +120,33 @@ public abstract class ClientRelayHandler<Q> extends RelayHandler {
         return new ServerRelayHandler(cyber, ctx.channel());
     }
 
-    protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception;
+    protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception;
 
-    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Q request) throws Exception {
-        release(ctx);
+    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
+        close(ctx);
     }
 
-    public ClientRelayHandler<Q> setCredentials(Credentials credentials) {
+    @Override
+    protected void releaseRelayChannel() {
+        if (relayChannel == null || !relayChannel.isActive()) {
+            return;
+        }
+        ChannelManager channelManager = cyber.channelManager;
+        if (channelManager != null) {
+            if (upstreamProxy == null) {
+                channelManager.release(relayChannel, serverAddress);
+            } else {
+                channelManager.release(relayChannel, serverAddress, upstreamProxy);
+            }
+        }
+    }
+
+    public ClientRelayHandler<R> setCredentials(Credentials credentials) {
         this.credentials = credentials;
         return this;
     }
 
-    public ClientRelayHandler<Q> setServerAddress(InetSocketAddress serverAddress) {
+    public ClientRelayHandler<R> setServerAddress(InetSocketAddress serverAddress) {
         this.serverAddress = serverAddress;
         return this;
     }

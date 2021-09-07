@@ -44,7 +44,7 @@ public class CyberServer implements Closeable {
     UpstreamProxyManager upstreamProxyManager;
     MitmManager mitmManager;
     SslContext clientSslContext;
-    ServerConnector connector;
+    ChannelManager channelManager;
     ProxyAuthenticator proxyAuthenticator;
 
     SocketAddress actualBoundAddress;
@@ -229,12 +229,12 @@ public class CyberServer implements Closeable {
         return this;
     }
 
-    public ServerConnector getConnector() {
-        return connector;
+    public ChannelManager getChannelManager() {
+        return channelManager;
     }
 
-    public CyberServer setConnector(ServerConnector connector) {
-        this.connector = connector;
+    public CyberServer setChannelManager(ChannelManager channelManager) {
+        this.channelManager = channelManager;
         return this;
     }
 
@@ -337,8 +337,8 @@ public class CyberServer implements Closeable {
             if (cyber.getWorkerEventLoopGroup() == null) {
                 cyber.workerEventLoopGroupSize = Runtime.getRuntime().availableProcessors();
             }
-            if (cyber.connector == null) {
-                cyber.connector = new DefaultServerConnector();
+            if (cyber.channelManager == null) {
+                cyber.channelManager = new UnpooledChannelManager();
             }
             if (cyber.preBoundAddress == null) {
                 cyber.preBoundAddress = new InetSocketAddress("127.0.0.1", 2228);
@@ -366,8 +366,8 @@ public class CyberServer implements Closeable {
             return this;
         }
 
-        public Builder withServerConnector(ServerConnector connector) {
-            cyber.connector = connector;
+        public Builder withChannelManager(ChannelManager channelManager) {
+            cyber.channelManager = channelManager;
             return this;
         }
 

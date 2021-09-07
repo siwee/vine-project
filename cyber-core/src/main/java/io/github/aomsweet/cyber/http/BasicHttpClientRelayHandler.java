@@ -55,14 +55,14 @@ public abstract class BasicHttpClientRelayHandler extends ClientRelayHandler<Htt
                 }
                 handleHttpRequest(ctx, httpRequest);
             } else {
-                release(ctx);
+                close(ctx);
             }
         } else if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
             if (httpContent.decoderResult().isSuccess()) {
                 handleHttpContent(ctx, httpContent);
             } else {
-                release(ctx);
+                close(ctx);
             }
         } else {
             handleUnknownMessage(ctx, msg);

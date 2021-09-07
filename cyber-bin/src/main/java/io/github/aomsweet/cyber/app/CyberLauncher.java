@@ -20,7 +20,10 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder;
+import io.github.aomsweet.cyber.Credentials;
 import io.github.aomsweet.cyber.CyberServer;
+import io.github.aomsweet.cyber.UpstreamProxy;
+import io.github.aomsweet.cyber.UpstreamProxyManager;
 import io.github.aomsweet.cyber.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.cyber.app.logback.LogbackConfigurator;
 import io.github.aomsweet.cyber.http.interceptor.FullHttpRequestInterceptor;
@@ -37,6 +40,10 @@ import sun.misc.Signal;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * @author aomsweet
@@ -61,25 +68,36 @@ public class CyberLauncher {
             // .withProxyAuthenticator(((username, password) -> "admin".equals(username) && "admin".equals(password)))
             // .withUpstreamProxy(() -> new HttpProxyHandler(new InetSocketAddress("localhost", 7890)))
             // .withUpstreamProxy(ProxyType.SOCKS5, "127.0.0.1", 7890)
-            // .withUpstreamProxyManager((request, credentials, clientAddress, serverAddress) ->
-            //     List.of(new ProxyInfo(ProxyType.HTTP, "127.0.0.1", 8888)))
-            .withMitmManager(new BouncyCastleSelfSignedMitmManager())
-            .withHttpInterceptorManager(new HttpInterceptorManager()
-                .addInterceptor(new FullHttpRequestInterceptor() {
-                    @Override
-                    public boolean preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception {
-                        httpRequest.headers().add("Cyber", "for test.");
-                        return true;
-                    }
-                })
-                .addInterceptor(new FullHttpResponseInterceptor() {
-                    @Override
-                    public boolean preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, FullHttpResponse httpResponse) throws Exception {
-                        httpResponse.headers().add("Cyber", "for test.");
-                        return true;
-                    }
-                })
-            )
+            .withUpstreamProxyManager(new UpstreamProxyManager() {
+                @Override
+                public Queue<? extends UpstreamProxy> lookupUpstreamProxies(Object requestObject, Credentials credentials, SocketAddress clientAddress, InetSocketAddress serverAddress) throws Exception {
+                    Queue<UpstreamProxy> queue = new ArrayDeque<>(1);
+                    queue.offer(new UpstreamProxy(UpstreamProxy.Protocol.HTTP, new InetSocketAddress("127.0.0.1", 7890)));
+                    return queue;
+                }
+
+                @Override
+                public void failConnectExceptionCaught(UpstreamProxy upstreamProxy, InetSocketAddress serverAddress, Throwable throwable) throws Exception {
+                    throwable.printStackTrace();
+                }
+            })
+            // .withMitmManager(new BouncyCastleSelfSignedMitmManager())
+            // .withHttpInterceptorManager(new HttpInterceptorManager()
+            //     .addInterceptor(new FullHttpRequestInterceptor() {
+            //         @Override
+            //         public boolean preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception {
+            //             httpRequest.headers().add("Cyber", "for test.");
+            //             return true;
+            //         }
+            //     })
+            //     .addInterceptor(new FullHttpResponseInterceptor() {
+            //         @Override
+            //         public boolean preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, FullHttpResponse httpResponse) throws Exception {
+            //             httpResponse.headers().add("Cyber", "for test.");
+            //             return true;
+            //         }
+            //     })
+            // )
             .withPort(2228)
             .build();
         cyber.start().whenComplete((channel, cause) -> {

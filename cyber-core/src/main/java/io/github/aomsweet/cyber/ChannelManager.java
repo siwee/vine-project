@@ -15,6 +15,7 @@
  */
 package io.github.aomsweet.cyber;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -23,10 +24,14 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public interface ServerConnector {
+public interface ChannelManager {
 
-    ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx);
+    ChannelFuture acquire(InetSocketAddress serverAddress, ChannelHandlerContext ctx);
 
-    ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, UpstreamProxy upstreamProxy);
+    ChannelFuture acquire(InetSocketAddress serverAddress, UpstreamProxy upstreamProxy, ChannelHandlerContext ctx);
+
+    void release(Channel channel, InetSocketAddress serverAddress);
+
+    void release(Channel channel, InetSocketAddress serverAddress, UpstreamProxy upstreamProxy);
 
 }

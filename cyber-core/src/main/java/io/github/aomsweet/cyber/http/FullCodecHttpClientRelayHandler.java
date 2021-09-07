@@ -68,11 +68,11 @@ public abstract class FullCodecHttpClientRelayHandler extends BasicHttpClientRel
     }
 
     @Override
-    public void destroy(ChannelHandlerContext ctx) {
+    public void release(ChannelHandlerContext ctx) {
         for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
             ReferenceCountUtil.release(message);
         }
-        super.destroy(ctx);
+        super.release(ctx);
     }
 
     @Override

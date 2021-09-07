@@ -16,6 +16,7 @@
 package io.github.aomsweet.cyber;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -28,17 +29,17 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public class DefaultServerConnector implements ServerConnector {
+public class UnpooledChannelManager implements ChannelManager {
 
-    private final static InternalLogger logger = InternalLoggerFactory.getInstance(DefaultServerConnector.class);
+    private final static InternalLogger logger = InternalLoggerFactory.getInstance(UnpooledChannelManager.class);
 
     Bootstrap bootstrap;
 
-    public DefaultServerConnector() {
+    public UnpooledChannelManager() {
         this.bootstrap = bootstrap();
     }
 
-    public DefaultServerConnector(Bootstrap bootstrap) {
+    public UnpooledChannelManager(Bootstrap bootstrap) {
         this.bootstrap = bootstrap;
     }
 
@@ -72,18 +73,30 @@ public class DefaultServerConnector implements ServerConnector {
     }
 
     @Override
-    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx) {
-        return bootstrap.clone(ctx.channel().eventLoop()).connect(socketAddress);
+    public ChannelFuture acquire(InetSocketAddress serverAddress, ChannelHandlerContext ctx) {
+        return bootstrap.clone(ctx.channel().eventLoop()).connect(serverAddress);
     }
 
     @Override
-    public ChannelFuture channel(InetSocketAddress socketAddress, ChannelHandlerContext ctx, UpstreamProxy upstreamProxy) {
+    public ChannelFuture acquire(InetSocketAddress serverAddress, UpstreamProxy upstreamProxy, ChannelHandlerContext ctx) {
         if (upstreamProxy == null) {
-            return channel(socketAddress, ctx);
+            return acquire(serverAddress, ctx);
         } else {
             ChannelHandler proxyHandler = upstreamProxy.newProxyHandler();
             ChannelInitializer<Channel> initHandler = channelInitializer(proxyHandler);
-            return bootstrap.clone(ctx.channel().eventLoop()).handler(initHandler).connect(socketAddress);
+            return bootstrap.clone(ctx.channel().eventLoop()).handler(initHandler).connect(serverAddress);
+        }
+    }
+
+    @Override
+    public void release(Channel channel, InetSocketAddress serverAddress) {
+        release(channel, serverAddress, null);
+    }
+
+    @Override
+    public void release(Channel channel, InetSocketAddress serverAddress, UpstreamProxy upstreamProxy) {
+        if (channel.isActive()) {
+            channel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
     }
 
@@ -97,7 +110,7 @@ public class DefaultServerConnector implements ServerConnector {
         return bootstrap;
     }
 
-    public DefaultServerConnector setBootstrap(Bootstrap bootstrap) {
+    public UnpooledChannelManager setBootstrap(Bootstrap bootstrap) {
         this.bootstrap = bootstrap;
         return this;
     }

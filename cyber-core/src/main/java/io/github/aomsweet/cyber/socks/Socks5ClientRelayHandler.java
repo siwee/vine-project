@@ -87,7 +87,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
             doConnectServer(ctx, ctx.channel(), request);
         } else {
             logger.error("Unsupported Socks5 {} command.", request.type());
-            release(ctx);
+            close(ctx);
         }
     }
 
@@ -105,6 +105,6 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
     @Override
     protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, request.dstAddrType());
-        ctx.writeAndFlush(response).addListener(future -> release(ctx));
+        ctx.writeAndFlush(response).addListener(future -> close(ctx));
     }
 }
