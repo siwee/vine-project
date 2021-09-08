@@ -30,8 +30,8 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
     protected UpstreamProxy upstreamProxy;
     protected InetSocketAddress serverAddress;
 
-    protected ChannelManager channelManager;
-    protected UpstreamProxyManager upstreamProxyManager;
+    protected final ChannelManager channelManager;
+    protected final UpstreamProxyManager upstreamProxyManager;
 
     public ClientRelayHandler(CyberServer cyber, InternalLogger logger) {
         super(cyber, logger);
@@ -51,20 +51,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
     public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
 
     protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
-        Queue<? extends UpstreamProxy> upstreamProxies = null;
-        if (upstreamProxyManager != null) {
-            upstreamProxies = upstreamProxyManager.lookupUpstreamProxies(request, credentials,
-                clientChannel.remoteAddress(), serverAddress);
-        }
-
-        ChannelFuture future;
-        if (upstreamProxies == null || upstreamProxies.isEmpty()) {
-            future = channelManager.acquire(serverAddress, ctx);
-        } else {
-            CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
-            doConnectServer(ctx, upstreamProxies, promise);
-            future = promise;
-        }
+        ChannelFuture future = acquireChannelFuture(ctx, clientChannel, request);
         future.addListener(action -> {
             try {
                 if (action.isSuccess()) {
@@ -86,9 +73,30 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         });
     }
 
-    protected void doConnectServer(ChannelHandlerContext ctx,
-                                   Queue<? extends UpstreamProxy> upstreamProxies,
-                                   CompleteChannelPromise promise) {
+    protected ChannelFuture acquireChannelFuture(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
+        if (upstreamProxy == null) {
+            if (upstreamProxyManager == null) {
+                return channelManager.acquire(serverAddress, ctx);
+            } else {
+                Queue<? extends UpstreamProxy> upstreamProxies = upstreamProxyManager.lookupUpstreamProxies(request,
+                    credentials, clientChannel.remoteAddress(), serverAddress);
+
+                if (upstreamProxies == null || upstreamProxies.isEmpty()) {
+                    return channelManager.acquire(serverAddress, ctx);
+                } else {
+                    CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
+                    acquireChannelFuture(ctx, upstreamProxies, promise);
+                    return promise;
+                }
+            }
+        } else {
+            return channelManager.acquire(serverAddress, upstreamProxy, ctx);
+        }
+    }
+
+    protected void acquireChannelFuture(ChannelHandlerContext ctx,
+                                        Queue<? extends UpstreamProxy> upstreamProxies,
+                                        CompleteChannelPromise promise) {
         UpstreamProxy upstreamProxy = upstreamProxies.poll();
         if (logger.isDebugEnabled()) {
             logger.debug("Use upstream proxy: [{}]", upstreamProxy);
@@ -101,7 +109,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
                 Throwable cause = future.cause();
                 upstreamProxyManager.failConnectExceptionCaught(upstreamProxy, serverAddress, cause);
                 if (upstreamProxies.peek() != null) {
-                    doConnectServer(ctx, upstreamProxies, promise);
+                    acquireChannelFuture(ctx, upstreamProxies, promise);
                 } else {
                     promise.setFailure(cause);
                 }
