@@ -15,11 +15,9 @@
  */
 package io.github.aomsweet.cyber.http;
 
-import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.CyberServer;
+import io.github.aomsweet.cyber.HandlerNames;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.ReferenceCountUtil;
@@ -43,27 +41,27 @@ public class HttpTunnelClientRelayHandler extends BasicHttpClientRelayHandler {
     }
 
     @Override
-    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception {
+    public void handleHttpRequest(HttpRequest httpRequest) throws Exception {
         ctx.pipeline().remove(HandlerNames.DECODER);
         serverAddress = resolveServerAddress(httpRequest);
         ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
         ctx.writeAndFlush(byteBuf.writeBytes(TUNNEL_ESTABLISHED_RESPONSE));
-        doConnectServer(ctx, ctx.channel(), httpRequest);
+        doConnectServer(httpRequest);
     }
 
     @Override
-    public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) throws Exception {
+    public void handleHttpContent(HttpContent httpContent) throws Exception {
         ReferenceCountUtil.release(httpContent);
     }
 
     @Override
-    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) {
+    public void handleUnknownMessage(Object message) {
         clientHello = message;
     }
 
     @Override
-    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) {
-        doServerRelay(ctx);
+    protected void onConnected(HttpRequest request) {
+        doServerRelay();
         if (clientHello != null) {
             relayChannel.writeAndFlush(clientHello);
             clientHello = null;
@@ -71,11 +69,11 @@ public class HttpTunnelClientRelayHandler extends BasicHttpClientRelayHandler {
     }
 
     @Override
-    public void release(ChannelHandlerContext ctx) {
+    public void release() {
         if (clientHello != null) {
             ReferenceCountUtil.release(clientHello);
             clientHello = null;
         }
-        super.release(ctx);
+        super.release();
     }
 }

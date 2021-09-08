@@ -35,6 +35,6 @@ public class ServerRelayHandler extends RelayHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        relay(ctx, msg);
+        relay(msg);
     }
 }

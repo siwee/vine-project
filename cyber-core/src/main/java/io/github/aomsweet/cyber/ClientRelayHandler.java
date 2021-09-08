@@ -26,6 +26,7 @@ import java.util.Queue;
  */
 public abstract class ClientRelayHandler<R> extends RelayHandler {
 
+    protected Channel clientChannel;
     protected Credentials credentials;
     protected UpstreamProxy upstreamProxy;
     protected InetSocketAddress serverAddress;
@@ -40,40 +41,46 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
     }
 
     @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        this.clientChannel = ctx.channel();
+        super.channelRegistered(ctx);
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (state == State.READY) {
-            relay(ctx, msg);
+            relay(msg);
         } else {
-            channelRead0(ctx, msg);
+            channelRead0(msg);
         }
     }
 
-    public abstract void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception;
+    public abstract void channelRead0(Object msg) throws Exception;
 
-    protected void doConnectServer(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
-        ChannelFuture future = acquireChannelFuture(ctx, clientChannel, request);
+    protected void doConnectServer(R request) throws Exception {
+        ChannelFuture future = acquireChannelFuture(request);
         future.addListener(action -> {
             try {
                 if (action.isSuccess()) {
                     if (clientChannel.isActive()) {
                         state = State.CONNECTED;
                         relayChannel = future.channel();
-                        onConnected(ctx, clientChannel, request);
+                        onConnected(request);
                     } else {
                         future.channel().close().addListener(ChannelFutureListener.CLOSE);
                     }
                 } else {
                     logger.error("Unable to establish a remote connection.", action.cause());
-                    this.onConnectFailed(ctx, clientChannel, request);
+                    this.onConnectFailed(request);
                 }
             } catch (Exception e) {
                 logger.error("{}: {}", e.getClass().getName(), e.getMessage(), e);
-                close(ctx);
+                close();
             }
         });
     }
 
-    protected ChannelFuture acquireChannelFuture(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
+    protected ChannelFuture acquireChannelFuture(R request) throws Exception {
         if (upstreamProxy == null) {
             if (upstreamProxyManager == null) {
                 return channelManager.acquire(serverAddress, ctx);
@@ -85,7 +92,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
                     return channelManager.acquire(serverAddress, ctx);
                 } else {
                     CompleteChannelPromise promise = new CompleteChannelPromise(ctx.channel().eventLoop());
-                    acquireChannelFuture(ctx, upstreamProxies, promise);
+                    acquireChannelFuture(upstreamProxies, promise);
                     return promise;
                 }
             }
@@ -94,9 +101,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         }
     }
 
-    protected void acquireChannelFuture(ChannelHandlerContext ctx,
-                                        Queue<? extends UpstreamProxy> upstreamProxies,
-                                        CompleteChannelPromise promise) {
+    protected void acquireChannelFuture(Queue<? extends UpstreamProxy> upstreamProxies, CompleteChannelPromise promise) {
         UpstreamProxy upstreamProxy = upstreamProxies.poll();
         if (logger.isDebugEnabled()) {
             logger.debug("Use upstream proxy: [{}]", upstreamProxy);
@@ -109,7 +114,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
                 Throwable cause = future.cause();
                 upstreamProxyManager.failConnectExceptionCaught(upstreamProxy, serverAddress, cause);
                 if (upstreamProxies.peek() != null) {
-                    acquireChannelFuture(ctx, upstreamProxies, promise);
+                    acquireChannelFuture(upstreamProxies, promise);
                 } else {
                     promise.setFailure(cause);
                 }
@@ -117,23 +122,23 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         });
     }
 
-    public void doServerRelay(ChannelHandlerContext ctx) {
+    public void doServerRelay() {
         if (relayChannel.isActive()) {
-            relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler(ctx));
+            relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler());
             state = State.READY;
         } else {
-            close(ctx);
+            close();
         }
     }
 
-    public ChannelHandler newServerRelayHandler(ChannelHandlerContext ctx) {
-        return new ServerRelayHandler(cyber, ctx.channel());
+    public ChannelHandler newServerRelayHandler() {
+        return new ServerRelayHandler(cyber, clientChannel);
     }
 
-    protected abstract void onConnected(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception;
+    protected abstract void onConnected(R request) throws Exception;
 
-    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, R request) throws Exception {
-        close(ctx);
+    protected void onConnectFailed(R request) throws Exception {
+        close();
     }
 
     @Override

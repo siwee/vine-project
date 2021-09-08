@@ -15,8 +15,8 @@
  */
 package io.github.aomsweet.cyber.http;
 
-import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.CyberServer;
+import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.ResolveServerAddressException;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -42,14 +42,14 @@ public class HttpClientRelayHandler extends FullCodecHttpClientRelayHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        super.channelRead0(ctx, msg);
+        super.channelRead0(msg);
     }
 
     @Override
-    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+    public void handleHttpRequest(HttpRequest request) throws Exception {
         InetSocketAddress targetAddress = resolveServerAddress(request);
         if (targetAddress.equals(this.serverAddress)) {
-            relay(ctx, request);
+            relay(request);
         } else {
             this.serverAddress = targetAddress;
             if (state == State.READY) {
@@ -59,14 +59,14 @@ public class HttpClientRelayHandler extends FullCodecHttpClientRelayHandler {
             }
 
             httpMessages.offer(request);
-            doConnectServer(ctx, ctx.channel(), request);
+            doConnectServer(request);
         }
     }
 
     @Override
-    public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
+    public void handleHttpContent(HttpContent httpContent) {
         if (state == State.READY) {
-            relay(ctx, httpContent);
+            relay(httpContent);
         } else {
             httpMessages.offer(httpContent);
         }

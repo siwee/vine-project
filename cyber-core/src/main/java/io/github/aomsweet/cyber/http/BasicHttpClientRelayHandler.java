@@ -21,7 +21,6 @@ import io.github.aomsweet.cyber.ResolveServerAddressException;
 import io.github.aomsweet.cyber.http.interceptor.HttpInterceptorManager;
 import io.github.aomsweet.cyber.http.interceptor.HttpRequestInterceptor;
 import io.github.aomsweet.cyber.http.interceptor.HttpResponseInterceptor;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -46,30 +45,30 @@ public abstract class BasicHttpClientRelayHandler extends ClientRelayHandler<Htt
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest httpRequest = (HttpRequest) msg;
             if (httpRequest.decoderResult().isSuccess()) {
-                if (!preHandle(ctx, httpRequest)) {
+                if (!preHandle(httpRequest)) {
                     return;
                 }
-                handleHttpRequest(ctx, httpRequest);
+                handleHttpRequest(httpRequest);
             } else {
-                close(ctx);
+                close();
             }
         } else if (msg instanceof HttpContent) {
             HttpContent httpContent = (HttpContent) msg;
             if (httpContent.decoderResult().isSuccess()) {
-                handleHttpContent(ctx, httpContent);
+                handleHttpContent(httpContent);
             } else {
-                close(ctx);
+                close();
             }
         } else {
-            handleUnknownMessage(ctx, msg);
+            handleUnknownMessage(msg);
         }
     }
 
-    private boolean preHandle(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception {
+    private boolean preHandle(HttpRequest httpRequest) throws Exception {
         HttpInterceptorManager interceptorManager = cyber.getHttpInterceptorManager();
         if (interceptorManager != null) {
             if (requestInterceptors == null) {
@@ -101,11 +100,11 @@ public abstract class BasicHttpClientRelayHandler extends ClientRelayHandler<Htt
         return true;
     }
 
-    public abstract void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest httpRequest) throws Exception;
+    public abstract void handleHttpRequest(HttpRequest httpRequest) throws Exception;
 
-    public abstract void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) throws Exception;
+    public abstract void handleHttpContent(HttpContent httpContent) throws Exception;
 
-    public void handleUnknownMessage(ChannelHandlerContext ctx, Object message) throws Exception {
+    public void handleUnknownMessage(Object message) throws Exception {
         ctx.fireChannelRead(message);
     }
 

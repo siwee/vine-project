@@ -29,13 +29,20 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * @author aomsweet
  */
-public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
+public abstract class RelayHandler extends ChannelInboundHandlerAdapter implements AutoCloseable {
 
     protected final InternalLogger logger;
     protected final CyberServer cyber;
 
     protected State state;
     protected Channel relayChannel;
+    protected ChannelHandlerContext ctx;
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        super.channelRegistered(ctx);
+    }
 
     public RelayHandler(CyberServer cyber, InternalLogger logger) {
         this.cyber = cyber;
@@ -47,14 +54,14 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         if (logger.isDebugEnabled()) {
             logger.debug("{} INACTIVE. CLOSING RELAY CHANNEL {}", ctx.channel(), relayChannel);
         }
-        close(ctx);
+        close();
     }
 
-    public void relay(ChannelHandlerContext ctx, Object msg) {
+    public void relay(Object msg) {
         if (relayChannel.isActive()) {
             relayChannel.writeAndFlush(msg);
         } else {
-            close(ctx);
+            close();
             ReferenceCountUtil.release(msg);
         }
     }
@@ -70,9 +77,9 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         relayChannel.config().setAutoRead(isWritable);
     }
 
-    public final void close(ChannelHandlerContext ctx) {
+    public final void close() {
         if (state != State.CLOSED) {
-            release(ctx);
+            release();
             releaseRelayChannel();
             if (logger.isDebugEnabled()) {
                 logger.debug("Channel released. {}", ctx.channel());
@@ -81,8 +88,8 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    protected void release(ChannelHandlerContext ctx) {
-        ctx.channel().close();
+    protected void release() {
+        ctx.close();
     }
 
     protected void releaseRelayChannel() {
@@ -104,7 +111,7 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter {
                 logger.error("{}: {}", cause.getClass().getName(), cause.getMessage(), cause);
             }
         } finally {
-            close(ctx);
+            close();
         }
     }
 

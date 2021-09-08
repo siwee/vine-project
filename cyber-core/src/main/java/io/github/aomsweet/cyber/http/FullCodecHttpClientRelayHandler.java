@@ -15,8 +15,8 @@
  */
 package io.github.aomsweet.cyber.http;
 
-import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.CyberServer;
+import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.ServerRelayHandler;
 import io.github.aomsweet.cyber.http.interceptor.HttpResponseInterceptor;
 import io.netty.channel.Channel;
@@ -48,7 +48,7 @@ public abstract class FullCodecHttpClientRelayHandler extends BasicHttpClientRel
     }
 
     @Override
-    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, HttpRequest request) throws Exception {
+    protected void onConnected(HttpRequest request) throws Exception {
         ChannelPipeline pipeline = relayChannel.pipeline();
         if (isSsl) {
             SslContext clientSslContext = getClientSslContext();
@@ -56,35 +56,35 @@ public abstract class FullCodecHttpClientRelayHandler extends BasicHttpClientRel
                 serverAddress.getHostName(), serverAddress.getPort()));
         }
         pipeline.addLast(HandlerNames.REQUEST_ENCODER, new HttpRequestEncoder());
-        doServerRelay(ctx);
+        doServerRelay();
     }
 
     @Override
-    public void doServerRelay(ChannelHandlerContext ctx) {
-        super.doServerRelay(ctx);
+    public void doServerRelay() {
+        super.doServerRelay();
         for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
             relayChannel.writeAndFlush(message);
         }
     }
 
     @Override
-    public void release(ChannelHandlerContext ctx) {
+    public void release() {
         for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
             ReferenceCountUtil.release(message);
         }
-        super.release(ctx);
+        super.release();
     }
 
     @Override
-    public ChannelHandler newServerRelayHandler(ChannelHandlerContext ctx) {
+    public ChannelHandler newServerRelayHandler() {
         if (cyber.getHttpInterceptorManager() == null) {
             return new ServerRelayHandler(cyber, ctx.channel());
         } else {
-            return newInterceptedServerRelayHandler(ctx);
+            return newInterceptedServerRelayHandler();
         }
     }
 
-    protected ChannelHandler newInterceptedServerRelayHandler(ChannelHandlerContext ctx) {
+    protected ChannelHandler newInterceptedServerRelayHandler() {
         Channel clientChannel = ctx.channel();
         Channel serverChannel = relayChannel;
         ChannelPipeline clientPipeline = clientChannel.pipeline();

@@ -15,8 +15,8 @@
  */
 package io.github.aomsweet.cyber.http;
 
-import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.CyberServer;
+import io.github.aomsweet.cyber.HandlerNames;
 import io.github.aomsweet.cyber.http.mitm.MitmManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,14 +46,14 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (state == State.READY && cyber.getHttpInterceptorManager() == null) {
-            relay(ctx, msg);
+            relay(msg);
         } else {
-            channelRead0(ctx, msg);
+            channelRead0(msg);
         }
     }
 
     @Override
-    public void handleHttpRequest(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
+    public void handleHttpRequest(HttpRequest request) throws Exception {
         if (HttpMethod.CONNECT.equals(request.method())) {
             this.serverAddress = resolveServerAddress(request);
             ByteBuf byteBuf = ctx.alloc().buffer(TUNNEL_ESTABLISHED_RESPONSE.length);
@@ -64,27 +64,27 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
             SslContext sslContext = mitmManager.serverSslContext(host);
             ctx.pipeline().addFirst(HandlerNames.SSL, sslContext.newHandler(ctx.alloc()));
 
-            doConnectServer(ctx, ctx.channel(), request);
+            doConnectServer(request);
         } else if (state == State.READY) {
-            relay(ctx, request);
+            relay(request);
         } else {
             httpMessages.offer(request);
         }
     }
 
     @Override
-    public void doServerRelay(ChannelHandlerContext ctx) {
+    public void doServerRelay() {
         if (sslHandshakeCompleted) {
-            super.doServerRelay(ctx);
+            super.doServerRelay();
         }
     }
 
     @Override
-    public void handleHttpContent(ChannelHandlerContext ctx, HttpContent httpContent) {
+    public void handleHttpContent(HttpContent httpContent) {
         if (sslHandshakeCompleted) {
             httpMessages.offer(httpContent);
         } else if (state == State.READY) {
-            relay(ctx, httpContent);
+            relay(httpContent);
         } else {
             ReferenceCountUtil.release(httpContent);
         }
@@ -96,7 +96,7 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
                 if (state == State.CONNECTED) {
-                    super.doServerRelay(ctx);
+                    super.doServerRelay();
                 }
             }
         }

@@ -16,9 +16,7 @@
 package io.github.aomsweet.cyber.socks;
 
 import io.github.aomsweet.cyber.*;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.socksx.v5.*;
 import io.netty.util.internal.logging.InternalLogger;
@@ -44,20 +42,20 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead0(Object msg) throws Exception {
         ChannelPipeline pipeline = ctx.pipeline();
         if (msg instanceof Socks5InitialRequest) {
-            initialRequestHandler(ctx, (Socks5InitialRequest) msg, pipeline);
+            initialRequestHandler((Socks5InitialRequest) msg, pipeline);
         } else if (msg instanceof Socks5PasswordAuthRequest) {
-            authRequestHandler(ctx, (Socks5PasswordAuthRequest) msg, pipeline);
+            authRequestHandler((Socks5PasswordAuthRequest) msg, pipeline);
         } else if (msg instanceof Socks5CommandRequest) {
-            cmdRequestHandler(ctx, (Socks5CommandRequest) msg, pipeline);
+            cmdRequestHandler((Socks5CommandRequest) msg, pipeline);
         } else {
             ctx.fireChannelRead(msg);
         }
     }
 
-    protected void initialRequestHandler(ChannelHandlerContext ctx, Socks5InitialRequest initialRequest, ChannelPipeline pipeline) {
+    protected void initialRequestHandler(Socks5InitialRequest initialRequest, ChannelPipeline pipeline) {
         Object response;
         if (cyber.getProxyAuthenticator() != null
             || initialRequest.authMethods().contains(Socks5AuthMethod.PASSWORD)) {
@@ -70,7 +68,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
     }
 
-    protected void authRequestHandler(ChannelHandlerContext ctx, Socks5PasswordAuthRequest authRequest, ChannelPipeline pipeline) {
+    protected void authRequestHandler(Socks5PasswordAuthRequest authRequest, ChannelPipeline pipeline) {
         credentials = new Credentials(authRequest.username(), authRequest.password());
         ProxyAuthenticator proxyAuthenticator = cyber.getProxyAuthenticator();
         if (proxyAuthenticator == null || proxyAuthenticator.authenticate(authRequest.username(), authRequest.password())) {
@@ -81,30 +79,30 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
         }
     }
 
-    protected void cmdRequestHandler(ChannelHandlerContext ctx, Socks5CommandRequest request, ChannelPipeline pipeline) throws Exception {
+    protected void cmdRequestHandler(Socks5CommandRequest request, ChannelPipeline pipeline) throws Exception {
         if (request.type() == Socks5CommandType.CONNECT) {
             serverAddress = InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
-            doConnectServer(ctx, ctx.channel(), request);
+            doConnectServer(request);
         } else {
             logger.error("Unsupported Socks5 {} command.", request.type());
-            close(ctx);
+            close();
         }
     }
 
     @Override
-    protected void onConnected(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
+    protected void onConnected(Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
             request.dstAddrType(), request.dstAddr(), request.dstPort());
         ctx.writeAndFlush(response);
         ChannelPipeline pipeline = clientChannel.pipeline();
         pipeline.remove(HandlerNames.DECODER);
         pipeline.remove(Socks5ServerEncoder.DEFAULT);
-        doServerRelay(ctx);
+        doServerRelay();
     }
 
     @Override
-    protected void onConnectFailed(ChannelHandlerContext ctx, Channel clientChannel, Socks5CommandRequest request) {
+    protected void onConnectFailed(Socks5CommandRequest request) {
         Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, request.dstAddrType());
-        ctx.writeAndFlush(response).addListener(future -> close(ctx));
+        ctx.writeAndFlush(response).addListener(future -> close());
     }
 }
