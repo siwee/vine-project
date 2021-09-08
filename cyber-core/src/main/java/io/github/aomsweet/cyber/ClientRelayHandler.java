@@ -137,6 +137,9 @@ public abstract class ClientRelayHandler<T> extends RelayHandler {
                 pendingWritesGC();
             }
             state = State.READY;
+            if (!clientChannel.config().isAutoRead()) {
+                clientChannel.config().setAutoRead(true);
+            }
         } else {
             close();
         }
