@@ -58,7 +58,7 @@ public class HttpClientRelayHandler extends FullCodecHttpClientRelayHandler {
                 state = State.UNCONNECTED;
             }
 
-            httpMessages.offer(request);
+            addPendingWrites(request);
             doConnectServer(request);
         }
     }
@@ -68,7 +68,7 @@ public class HttpClientRelayHandler extends FullCodecHttpClientRelayHandler {
         if (state == State.READY) {
             relay(httpContent);
         } else {
-            httpMessages.offer(httpContent);
+            addPendingWrites(httpContent);
         }
     }
 

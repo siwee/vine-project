@@ -38,15 +38,15 @@ public abstract class RelayHandler extends ChannelInboundHandlerAdapter implemen
     protected Channel relayChannel;
     protected ChannelHandlerContext ctx;
 
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        super.channelRegistered(ctx);
-    }
-
     public RelayHandler(CyberServer cyber, InternalLogger logger) {
         this.cyber = cyber;
         this.logger = logger;
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        super.handlerAdded(ctx);
     }
 
     @Override

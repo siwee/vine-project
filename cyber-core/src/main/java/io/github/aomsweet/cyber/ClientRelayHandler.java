@@ -16,9 +16,11 @@
 package io.github.aomsweet.cyber;
 
 import io.netty.channel.*;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
 import java.util.Queue;
 
 /**
@@ -26,13 +28,15 @@ import java.util.Queue;
  */
 public abstract class ClientRelayHandler<R> extends RelayHandler {
 
+    private Queue<Object> pendingWrites;
+
+    protected final ChannelManager channelManager;
+    protected final UpstreamProxyManager upstreamProxyManager;
+
     protected Channel clientChannel;
     protected Credentials credentials;
     protected UpstreamProxy upstreamProxy;
     protected InetSocketAddress serverAddress;
-
-    protected final ChannelManager channelManager;
-    protected final UpstreamProxyManager upstreamProxyManager;
 
     public ClientRelayHandler(CyberServer cyber, InternalLogger logger) {
         super(cyber, logger);
@@ -41,9 +45,9 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
     }
 
     @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.clientChannel = ctx.channel();
-        super.channelRegistered(ctx);
+        super.handlerAdded(ctx);
     }
 
     @Override
@@ -65,13 +69,13 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
                     if (clientChannel.isActive()) {
                         state = State.CONNECTED;
                         relayChannel = future.channel();
-                        onConnected(request);
+                        installServerRelay();
                     } else {
                         future.channel().close().addListener(ChannelFutureListener.CLOSE);
                     }
                 } else {
                     logger.error("Unable to establish a remote connection.", action.cause());
-                    this.onConnectFailed(request);
+                    close();
                 }
             } catch (Exception e) {
                 logger.error("{}: {}", e.getClass().getName(), e.getMessage(), e);
@@ -80,7 +84,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         });
     }
 
-    protected ChannelFuture acquireChannelFuture(R request) throws Exception {
+    private ChannelFuture acquireChannelFuture(R request) throws Exception {
         if (upstreamProxy == null) {
             if (upstreamProxyManager == null) {
                 return channelManager.acquire(serverAddress, ctx);
@@ -101,7 +105,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         }
     }
 
-    protected void acquireChannelFuture(Queue<? extends UpstreamProxy> upstreamProxies, CompleteChannelPromise promise) {
+    private void acquireChannelFuture(Queue<? extends UpstreamProxy> upstreamProxies, CompleteChannelPromise promise) {
         UpstreamProxy upstreamProxy = upstreamProxies.poll();
         if (logger.isDebugEnabled()) {
             logger.debug("Use upstream proxy: [{}]", upstreamProxy);
@@ -122,23 +126,46 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         });
     }
 
-    public void doServerRelay() {
+    public void installServerRelay() throws Exception {
         if (relayChannel.isActive()) {
             relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler());
+            if (pendingWrites != null) {
+                for (Object message = pendingWrites.poll(); message != null; message = pendingWrites.poll()) {
+                    relayChannel.write(message);
+                }
+                relayChannel.flush();
+                pendingWritesGC();
+            }
             state = State.READY;
         } else {
             close();
         }
     }
 
-    public ChannelHandler newServerRelayHandler() {
+    protected void addPendingWrites(Object msg) {
+        if (pendingWrites == null) {
+            pendingWrites = new ArrayDeque<>(3);
+        }
+        pendingWrites.offer(msg);
+    }
+
+    protected void pendingWritesGC() {
+        pendingWrites = null;
+    }
+
+    public ChannelHandler newServerRelayHandler() throws Exception {
         return new ServerRelayHandler(cyber, clientChannel);
     }
 
-    protected abstract void onConnected(R request) throws Exception;
-
-    protected void onConnectFailed(R request) throws Exception {
-        close();
+    @Override
+    protected final void release() {
+        if (pendingWrites != null) {
+            for (Object message = pendingWrites.poll(); message != null; message = pendingWrites.poll()) {
+                ReferenceCountUtil.release(message);
+            }
+            pendingWritesGC();
+        }
+        super.release();
     }
 
     @Override

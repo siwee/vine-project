@@ -68,25 +68,25 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
         } else if (state == State.READY) {
             relay(request);
         } else {
-            httpMessages.offer(request);
-        }
-    }
-
-    @Override
-    public void doServerRelay() {
-        if (sslHandshakeCompleted) {
-            super.doServerRelay();
+            addPendingWrites(request);
         }
     }
 
     @Override
     public void handleHttpContent(HttpContent httpContent) {
         if (sslHandshakeCompleted) {
-            httpMessages.offer(httpContent);
+            addPendingWrites(httpContent);
         } else if (state == State.READY) {
             relay(httpContent);
         } else {
             ReferenceCountUtil.release(httpContent);
+        }
+    }
+
+    @Override
+    public void installServerRelay() throws Exception{
+        if (sslHandshakeCompleted) {
+            super.installServerRelay();
         }
     }
 
@@ -96,7 +96,7 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
                 if (state == State.CONNECTED) {
-                    super.doServerRelay();
+                    super.installServerRelay();
                 }
             }
         }

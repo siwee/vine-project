@@ -51,7 +51,7 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
         } else if (msg instanceof Socks5CommandRequest) {
             cmdRequestHandler((Socks5CommandRequest) msg, pipeline);
         } else {
-            ctx.fireChannelRead(msg);
+            addPendingWrites(msg);
         }
     }
 
@@ -82,6 +82,13 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
     protected void cmdRequestHandler(Socks5CommandRequest request, ChannelPipeline pipeline) throws Exception {
         if (request.type() == Socks5CommandType.CONNECT) {
             serverAddress = InetSocketAddress.createUnresolved(request.dstAddr(), request.dstPort());
+
+            Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
+                request.dstAddrType(), request.dstAddr(), request.dstPort());
+            ctx.writeAndFlush(response);
+            pipeline.remove(HandlerNames.DECODER);
+            pipeline.remove(Socks5ServerEncoder.DEFAULT);
+
             doConnectServer(request);
         } else {
             logger.error("Unsupported Socks5 {} command.", request.type());
@@ -89,20 +96,4 @@ public final class Socks5ClientRelayHandler extends ClientRelayHandler<Socks5Com
         }
     }
 
-    @Override
-    protected void onConnected(Socks5CommandRequest request) {
-        Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
-            request.dstAddrType(), request.dstAddr(), request.dstPort());
-        ctx.writeAndFlush(response);
-        ChannelPipeline pipeline = clientChannel.pipeline();
-        pipeline.remove(HandlerNames.DECODER);
-        pipeline.remove(Socks5ServerEncoder.DEFAULT);
-        doServerRelay();
-    }
-
-    @Override
-    protected void onConnectFailed(Socks5CommandRequest request) {
-        Object response = new DefaultSocks5CommandResponse(Socks5CommandStatus.FAILURE, request.dstAddrType());
-        ctx.writeAndFlush(response).addListener(future -> close());
-    }
 }

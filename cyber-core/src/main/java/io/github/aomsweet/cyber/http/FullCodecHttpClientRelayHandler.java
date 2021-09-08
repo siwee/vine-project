@@ -23,16 +23,16 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
 import javax.net.ssl.SSLException;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
 /**
  * @author aomsweet
@@ -40,15 +40,13 @@ import java.util.Queue;
 public abstract class FullCodecHttpClientRelayHandler extends BasicHttpClientRelayHandler {
 
     protected boolean isSsl;
-    protected Queue<Object> httpMessages;
 
     public FullCodecHttpClientRelayHandler(CyberServer cyber, InternalLogger logger) {
         super(cyber, logger);
-        this.httpMessages = new ArrayDeque<>(4);
     }
 
     @Override
-    protected void onConnected(HttpRequest request) throws Exception {
+    public ChannelHandler newServerRelayHandler() throws Exception {
         ChannelPipeline pipeline = relayChannel.pipeline();
         if (isSsl) {
             SslContext clientSslContext = getClientSslContext();
@@ -56,27 +54,7 @@ public abstract class FullCodecHttpClientRelayHandler extends BasicHttpClientRel
                 serverAddress.getHostName(), serverAddress.getPort()));
         }
         pipeline.addLast(HandlerNames.REQUEST_ENCODER, new HttpRequestEncoder());
-        doServerRelay();
-    }
 
-    @Override
-    public void doServerRelay() {
-        super.doServerRelay();
-        for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
-            relayChannel.writeAndFlush(message);
-        }
-    }
-
-    @Override
-    public void release() {
-        for (Object message = httpMessages.poll(); message != null; message = httpMessages.poll()) {
-            ReferenceCountUtil.release(message);
-        }
-        super.release();
-    }
-
-    @Override
-    public ChannelHandler newServerRelayHandler() {
         if (cyber.getHttpInterceptorManager() == null) {
             return new ServerRelayHandler(cyber, ctx.channel());
         } else {
