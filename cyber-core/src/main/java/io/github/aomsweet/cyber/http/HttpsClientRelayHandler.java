@@ -84,9 +84,9 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
     }
 
     @Override
-    public void installServerRelay() throws Exception{
+    public void dockingRelay() throws Exception{
         if (sslHandshakeCompleted) {
-            super.installServerRelay();
+            super.dockingRelay();
         }
     }
 
@@ -96,7 +96,7 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
             if (((SslHandshakeCompletionEvent) evt).isSuccess()) {
                 sslHandshakeCompleted = true;
                 if (state == State.CONNECTED) {
-                    super.installServerRelay();
+                    super.dockingRelay();
                 }
             }
         }

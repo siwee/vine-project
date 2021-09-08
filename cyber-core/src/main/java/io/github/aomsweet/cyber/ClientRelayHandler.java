@@ -26,7 +26,7 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public abstract class ClientRelayHandler<R> extends RelayHandler {
+public abstract class ClientRelayHandler<T> extends RelayHandler {
 
     private Queue<Object> pendingWrites;
 
@@ -61,7 +61,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
 
     public abstract void channelRead0(Object msg) throws Exception;
 
-    protected void doConnectServer(R request) throws Exception {
+    protected void doConnectServer(T request) throws Exception {
         ChannelFuture future = acquireChannelFuture(request);
         future.addListener(action -> {
             try {
@@ -69,7 +69,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
                     if (clientChannel.isActive()) {
                         state = State.CONNECTED;
                         relayChannel = future.channel();
-                        installServerRelay();
+                        dockingRelay();
                     } else {
                         future.channel().close().addListener(ChannelFutureListener.CLOSE);
                     }
@@ -84,7 +84,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         });
     }
 
-    private ChannelFuture acquireChannelFuture(R request) throws Exception {
+    private ChannelFuture acquireChannelFuture(T request) throws Exception {
         if (upstreamProxy == null) {
             if (upstreamProxyManager == null) {
                 return channelManager.acquire(serverAddress, ctx);
@@ -126,7 +126,7 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         });
     }
 
-    public void installServerRelay() throws Exception {
+    public void dockingRelay() throws Exception {
         if (relayChannel.isActive()) {
             relayChannel.pipeline().addLast(HandlerNames.RELAY, newServerRelayHandler());
             if (pendingWrites != null) {
@@ -183,12 +183,12 @@ public abstract class ClientRelayHandler<R> extends RelayHandler {
         }
     }
 
-    public ClientRelayHandler<R> setCredentials(Credentials credentials) {
+    public ClientRelayHandler<T> setCredentials(Credentials credentials) {
         this.credentials = credentials;
         return this;
     }
 
-    public ClientRelayHandler<R> setServerAddress(InetSocketAddress serverAddress) {
+    public ClientRelayHandler<T> setServerAddress(InetSocketAddress serverAddress) {
         this.serverAddress = serverAddress;
         return this;
     }
