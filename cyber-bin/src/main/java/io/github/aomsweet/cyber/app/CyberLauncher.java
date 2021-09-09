@@ -80,7 +80,7 @@ public class CyberLauncher {
                 }
             })
             .withMitmManager(new BouncyCastleSelfSignedMitmManager())
-            .withHttpInterceptorManager(new HttpInterceptorManager()
+            .withHttpInterceptorManager(new DefaultHttpInterceptorManager()
                 .addInterceptor(new HttpInterceptor() {
                     @Override
                     public boolean match(HttpRequest httpRequest) {

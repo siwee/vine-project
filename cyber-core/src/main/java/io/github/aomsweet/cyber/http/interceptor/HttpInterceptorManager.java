@@ -17,37 +17,15 @@ package io.github.aomsweet.cyber.http.interceptor;
 
 import io.netty.handler.codec.http.HttpRequest;
 
-import java.util.*;
+import java.util.Queue;
 
 /**
  * @author aomsweet
  */
-public class HttpInterceptorManager {
+public interface HttpInterceptorManager {
 
-    List<HttpInterceptor> httpInterceptors;
+    HttpInterceptorManager addInterceptor(HttpInterceptor interceptor);
 
-    public HttpInterceptorManager addInterceptor(HttpInterceptor interceptor) {
-        Objects.requireNonNull(interceptor);
-        if (httpInterceptors == null) {
-            httpInterceptors = new ArrayList<>();
-        }
-        httpInterceptors.add(interceptor);
-        return this;
-    }
+    Queue<HttpInterceptor> matchInterceptor(HttpRequest httpRequest);
 
-    public Queue<HttpInterceptor> matchInterceptor(HttpRequest httpRequest) {
-        if (httpInterceptors == null) {
-            return null;
-        }
-        Queue<HttpInterceptor> queue = null;
-        for (HttpInterceptor httpInterceptor : httpInterceptors) {
-            if (httpInterceptor.match(httpRequest)) {
-                if (queue == null) {
-                    queue = new ArrayDeque<>(2);
-                }
-                queue.offer(httpInterceptor);
-            }
-        }
-        return queue;
-    }
 }
