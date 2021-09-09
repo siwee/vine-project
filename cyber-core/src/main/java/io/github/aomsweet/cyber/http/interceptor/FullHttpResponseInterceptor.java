@@ -35,7 +35,7 @@ public abstract class FullHttpResponseInterceptor extends FullHttpMessageInterce
     }
 
     @Override
-    public boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse, ChannelContext context) throws Exception {
+    public final boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse, ChannelContext context) throws Exception {
         ChannelPipeline pipeline = context.getServerChannel().pipeline();
         if (httpResponse instanceof FullHttpResponse) {
             pipeline.remove(HandlerNames.DECOMPRESS);
