@@ -32,7 +32,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
+public class HttpsClientRelayHandler extends HttpBaseClientRelayHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpsClientRelayHandler.class);
 
@@ -84,7 +84,7 @@ public class HttpsClientRelayHandler extends FullCodecHttpClientRelayHandler {
     }
 
     @Override
-    public void dockingRelay() throws Exception{
+    public void dockingRelay() throws Exception {
         if (sslHandshakeCompleted) {
             super.dockingRelay();
         }

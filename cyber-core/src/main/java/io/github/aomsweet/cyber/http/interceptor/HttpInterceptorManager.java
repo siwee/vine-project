@@ -24,54 +24,28 @@ import java.util.*;
  */
 public class HttpInterceptorManager {
 
-    List<HttpRequestInterceptor> httpRequestInterceptors;
-    List<HttpResponseInterceptor> httpResponseInterceptors;
+    List<HttpInterceptor> httpInterceptors;
 
-    public HttpInterceptorManager addInterceptor(HttpRequestInterceptor interceptor) {
+    public HttpInterceptorManager addInterceptor(HttpInterceptor interceptor) {
         Objects.requireNonNull(interceptor);
-        if (httpRequestInterceptors == null) {
-            httpRequestInterceptors = new ArrayList<>();
+        if (httpInterceptors == null) {
+            httpInterceptors = new ArrayList<>();
         }
-        httpRequestInterceptors.add(interceptor);
+        httpInterceptors.add(interceptor);
         return this;
     }
 
-    public HttpInterceptorManager addInterceptor(HttpResponseInterceptor interceptor) {
-        Objects.requireNonNull(interceptor);
-        if (httpResponseInterceptors == null) {
-            httpResponseInterceptors = new ArrayList<>();
-        }
-        httpResponseInterceptors.add(interceptor);
-        return this;
-    }
-
-    public Queue<HttpRequestInterceptor> matchRequestInterceptor(HttpRequest httpRequest) {
-        if (httpRequestInterceptors == null) {
+    public Queue<HttpInterceptor> matchInterceptor(HttpRequest httpRequest) {
+        if (httpInterceptors == null) {
             return null;
         }
-        Queue<HttpRequestInterceptor> queue = null;
-        for (HttpRequestInterceptor httpRequestInterceptor : httpRequestInterceptors) {
-            if (httpRequestInterceptor.match(httpRequest)) {
+        Queue<HttpInterceptor> queue = null;
+        for (HttpInterceptor httpInterceptor : httpInterceptors) {
+            if (httpInterceptor.match(httpRequest)) {
                 if (queue == null) {
                     queue = new ArrayDeque<>(2);
                 }
-                queue.offer(httpRequestInterceptor);
-            }
-        }
-        return queue;
-    }
-
-    public Queue<HttpResponseInterceptor> matchResponseInterceptor(HttpRequest httpRequest) {
-        if (httpResponseInterceptors == null) {
-            return null;
-        }
-        Queue<HttpResponseInterceptor> queue = null;
-        for (HttpResponseInterceptor httpResponseInterceptor : httpResponseInterceptors) {
-            if (httpResponseInterceptor.match(httpRequest)) {
-                if (queue == null) {
-                    queue = new ArrayDeque<>(2);
-                }
-                queue.offer(httpResponseInterceptor);
+                queue.offer(httpInterceptor);
             }
         }
         return queue;

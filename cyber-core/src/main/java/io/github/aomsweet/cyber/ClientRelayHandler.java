@@ -191,8 +191,4 @@ public abstract class ClientRelayHandler<T> extends RelayHandler {
         return this;
     }
 
-    public ClientRelayHandler<T> setServerAddress(InetSocketAddress serverAddress) {
-        this.serverAddress = serverAddress;
-        return this;
-    }
 }

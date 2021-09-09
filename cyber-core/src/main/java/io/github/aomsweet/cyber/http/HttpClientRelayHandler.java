@@ -32,7 +32,7 @@ import java.net.InetSocketAddress;
 /**
  * @author aomsweet
  */
-public class HttpClientRelayHandler extends FullCodecHttpClientRelayHandler {
+public class HttpClientRelayHandler extends HttpBaseClientRelayHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpClientRelayHandler.class);
 

@@ -15,7 +15,7 @@
  */
 package io.github.aomsweet.cyber.http.interceptor;
 
-import io.netty.channel.Channel;
+import io.github.aomsweet.cyber.http.ChannelContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 
@@ -24,10 +24,6 @@ import io.netty.handler.codec.http.HttpResponse;
  */
 public interface HttpResponseInterceptor {
 
-    default boolean match(HttpRequest httpRequest) {
-        return true;
-    }
-
-    boolean preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, HttpResponse httpResponse) throws Exception;
+    boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse, ChannelContext context) throws Exception;
 
 }

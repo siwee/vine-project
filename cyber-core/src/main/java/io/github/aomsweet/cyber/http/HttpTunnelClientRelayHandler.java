@@ -17,7 +17,9 @@ package io.github.aomsweet.cyber.http;
 
 import io.github.aomsweet.cyber.CyberServer;
 import io.github.aomsweet.cyber.HandlerNames;
+import io.github.aomsweet.cyber.ServerRelayHandler;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
@@ -28,7 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * @author aomsweet
  */
-public class HttpTunnelClientRelayHandler extends BasicHttpClientRelayHandler {
+public class HttpTunnelClientRelayHandler extends HttpBaseClientRelayHandler {
 
     private final static InternalLogger logger = InternalLoggerFactory.getInstance(HttpTunnelClientRelayHandler.class);
 
@@ -60,4 +62,8 @@ public class HttpTunnelClientRelayHandler extends BasicHttpClientRelayHandler {
         addPendingWrites(message);
     }
 
+    @Override
+    public ChannelHandler newServerRelayHandler() throws Exception {
+        return new ServerRelayHandler(cyber, clientChannel);
+    }
 }

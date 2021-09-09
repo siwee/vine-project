@@ -16,7 +16,7 @@
 package io.github.aomsweet.cyber.http.interceptor;
 
 import io.github.aomsweet.cyber.HandlerNames;
-import io.netty.channel.Channel;
+import io.github.aomsweet.cyber.http.ChannelContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContentDecompressor;
@@ -38,13 +38,13 @@ public abstract class FullHttpRequestInterceptor extends FullHttpMessageIntercep
     }
 
     @Override
-    public final boolean preHandle(Channel clientChannel, HttpRequest httpRequest) throws Exception {
-        ChannelPipeline pipeline = clientChannel.pipeline();
+    public final boolean preHandle(HttpRequest httpRequest, ChannelContext context) throws Exception {
+        ChannelPipeline pipeline = context.getClientChannel().pipeline();
         if (httpRequest instanceof FullHttpRequest) {
             FullHttpRequest fullHttpRequest = (FullHttpRequest) httpRequest;
             pipeline.remove(HandlerNames.DECOMPRESS);
             pipeline.remove(HandlerNames.AGGREGATOR);
-            return preHandle(clientChannel, fullHttpRequest);
+            return preHandle(fullHttpRequest, context);
         } else {
             pipeline
                 .addAfter(HandlerNames.DECODER, HandlerNames.DECOMPRESS, new HttpContentDecompressor())
@@ -54,6 +54,6 @@ public abstract class FullHttpRequestInterceptor extends FullHttpMessageIntercep
         }
     }
 
-    public abstract boolean preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception;
+    public abstract boolean preHandle(FullHttpRequest httpRequest, ChannelContext context) throws Exception;
 
 }

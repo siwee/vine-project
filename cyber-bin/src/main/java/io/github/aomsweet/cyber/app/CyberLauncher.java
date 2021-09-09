@@ -26,11 +26,9 @@ import io.github.aomsweet.cyber.UpstreamProxy;
 import io.github.aomsweet.cyber.UpstreamProxyManager;
 import io.github.aomsweet.cyber.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.cyber.app.logback.LogbackConfigurator;
-import io.github.aomsweet.cyber.http.interceptor.FullHttpRequestInterceptor;
-import io.github.aomsweet.cyber.http.interceptor.FullHttpResponseInterceptor;
-import io.github.aomsweet.cyber.http.interceptor.HttpInterceptorManager;
+import io.github.aomsweet.cyber.http.ChannelContext;
+import io.github.aomsweet.cyber.http.interceptor.*;
 import io.github.aomsweet.cyber.http.mitm.BouncyCastleSelfSignedMitmManager;
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
@@ -81,23 +79,39 @@ public class CyberLauncher {
                     throwable.printStackTrace();
                 }
             })
-            // .withMitmManager(new BouncyCastleSelfSignedMitmManager())
-            // .withHttpInterceptorManager(new HttpInterceptorManager()
-            //     .addInterceptor(new FullHttpRequestInterceptor() {
-            //         @Override
-            //         public boolean preHandle(Channel clientChannel, FullHttpRequest httpRequest) throws Exception {
-            //             httpRequest.headers().add("Cyber", "for test.");
-            //             return true;
-            //         }
-            //     })
-            //     .addInterceptor(new FullHttpResponseInterceptor() {
-            //         @Override
-            //         public boolean preHandle(Channel clientChannel, Channel serverChannel, HttpRequest httpRequest, FullHttpResponse httpResponse) throws Exception {
-            //             httpResponse.headers().add("Cyber", "for test.");
-            //             return true;
-            //         }
-            //     })
-            // )
+            .withMitmManager(new BouncyCastleSelfSignedMitmManager())
+            .withHttpInterceptorManager(new HttpInterceptorManager()
+                .addInterceptor(new HttpInterceptor() {
+                    @Override
+                    public boolean match(HttpRequest httpRequest) {
+                        return true;
+                    }
+
+                    @Override
+                    public HttpRequestInterceptor requestInterceptor() {
+                        return new FullHttpRequestInterceptor() {
+
+                            @Override
+                            public boolean preHandle(FullHttpRequest httpRequest, ChannelContext context) throws Exception {
+                                httpRequest.headers().add("Cyber", "for test.");
+                                return true;
+                            }
+                        };
+                    }
+
+                    @Override
+                    public HttpResponseInterceptor responseInterceptor() {
+                        return new FullHttpResponseInterceptor() {
+
+                            @Override
+                            public boolean preHandle(HttpRequest httpRequest, FullHttpResponse httpResponse, ChannelContext context) throws Exception {
+                                httpResponse.headers().add("Cyber", "for test.");
+                                return true;
+                            }
+                        };
+                    }
+                })
+            )
             .withPort(2228)
             .build();
         cyber.start().whenComplete((channel, cause) -> {
