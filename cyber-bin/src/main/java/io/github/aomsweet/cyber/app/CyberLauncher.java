@@ -26,7 +26,7 @@ import io.github.aomsweet.cyber.UpstreamProxy;
 import io.github.aomsweet.cyber.UpstreamProxyManager;
 import io.github.aomsweet.cyber.app.logback.AnsiConsoleAppender;
 import io.github.aomsweet.cyber.app.logback.LogbackConfigurator;
-import io.github.aomsweet.cyber.http.ChannelContext;
+import io.github.aomsweet.cyber.http.HttpChannelContext;
 import io.github.aomsweet.cyber.http.interceptor.*;
 import io.github.aomsweet.cyber.http.mitm.BouncyCastleSelfSignedMitmManager;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -92,7 +92,7 @@ public class CyberLauncher {
                         return new FullHttpRequestInterceptor() {
 
                             @Override
-                            public boolean preHandle(FullHttpRequest httpRequest, ChannelContext context) throws Exception {
+                            public boolean preHandle(FullHttpRequest httpRequest, HttpChannelContext context) throws Exception {
                                 httpRequest.headers().add("Cyber", "for test.");
                                 return true;
                             }
@@ -104,7 +104,7 @@ public class CyberLauncher {
                         return new FullHttpResponseInterceptor() {
 
                             @Override
-                            public boolean preHandle(HttpRequest httpRequest, FullHttpResponse httpResponse, ChannelContext context) throws Exception {
+                            public boolean preHandle(HttpRequest httpRequest, FullHttpResponse httpResponse, HttpChannelContext context) throws Exception {
                                 httpResponse.headers().add("Cyber", "for test.");
                                 return true;
                             }

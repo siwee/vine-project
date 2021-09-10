@@ -28,13 +28,13 @@ import java.net.SocketAddress;
 /**
  * @author aomsweet
  */
-public interface ChannelContext extends AutoCloseable {
+public interface HttpChannelContext extends AutoCloseable {
 
     HttpRequest getHttpRequest();
 
     UpstreamProxy getUpstreamProxy();
 
-    ChannelContext setUpstreamProxy(UpstreamProxy upstreamProxy);
+    HttpChannelContext setUpstreamProxy(UpstreamProxy upstreamProxy);
 
     Channel getClientChannel();
 
@@ -56,5 +56,5 @@ public interface ChannelContext extends AutoCloseable {
 
     <T> T getData();
 
-    ChannelContext setData(Object data);
+    HttpChannelContext setData(Object data);
 }

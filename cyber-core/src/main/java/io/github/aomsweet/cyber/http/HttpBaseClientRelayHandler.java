@@ -39,7 +39,7 @@ import java.util.Queue;
 /**
  * @author aomsweet
  */
-public abstract class HttpBaseClientRelayHandler extends ClientRelayHandler<HttpRequest> implements ChannelContext {
+public abstract class HttpBaseClientRelayHandler extends ClientRelayHandler<HttpRequest> implements HttpChannelContext {
 
     public static final byte[] TUNNEL_ESTABLISHED_RESPONSE = "HTTP/1.1 200 Connection Established\r\n\r\n".getBytes();
 
@@ -214,7 +214,7 @@ public abstract class HttpBaseClientRelayHandler extends ClientRelayHandler<Http
     }
 
     @Override
-    public ChannelContext setUpstreamProxy(UpstreamProxy upstreamProxy) {
+    public HttpChannelContext setUpstreamProxy(UpstreamProxy upstreamProxy) {
         this.upstreamProxy = upstreamProxy;
         return this;
     }
@@ -278,7 +278,7 @@ public abstract class HttpBaseClientRelayHandler extends ClientRelayHandler<Http
     }
 
     @Override
-    public ChannelContext setData(Object data) {
+    public HttpChannelContext setData(Object data) {
         this.data = data;
         return this;
     }

@@ -16,7 +16,7 @@
 package io.github.aomsweet.cyber.http.interceptor;
 
 import io.github.aomsweet.cyber.HandlerNames;
-import io.github.aomsweet.cyber.http.ChannelContext;
+import io.github.aomsweet.cyber.http.HttpChannelContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.*;
 
@@ -35,7 +35,7 @@ public abstract class FullHttpResponseInterceptor extends FullHttpMessageInterce
     }
 
     @Override
-    public final boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse, ChannelContext context) throws Exception {
+    public final boolean preHandle(HttpRequest httpRequest, HttpResponse httpResponse, HttpChannelContext context) throws Exception {
         ChannelPipeline pipeline = context.getServerChannel().pipeline();
         if (httpResponse instanceof FullHttpResponse) {
             pipeline.remove(HandlerNames.DECOMPRESS);
@@ -50,5 +50,5 @@ public abstract class FullHttpResponseInterceptor extends FullHttpMessageInterce
         }
     }
 
-    public abstract boolean preHandle(HttpRequest httpRequest, FullHttpResponse httpResponse, ChannelContext context) throws Exception;
+    public abstract boolean preHandle(HttpRequest httpRequest, FullHttpResponse httpResponse, HttpChannelContext context) throws Exception;
 }
